@@ -1,4 +1,4 @@
-package cn.edu.thu.jcpn.core.runtime.token;
+package cn.edu.thu.jcpn.core.places.runtime;
 
 public interface ITarget {
 

@@ -1,4 +1,4 @@
-package cn.edu.thu.jcpn.core.runtime.token;
+package cn.edu.thu.jcpn.core.runtime.tokens;
 
 /**
  * basic colset interface, all colsets must implement this interface.

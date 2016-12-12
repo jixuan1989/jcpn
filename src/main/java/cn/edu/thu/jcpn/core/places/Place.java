@@ -1,7 +1,6 @@
-package cn.edu.thu.jcpn.core.place;
+package cn.edu.thu.jcpn.core.places;
 
-import java.util.HashMap;
-import java.util.Map;
+import static cn.edu.thu.jcpn.core.places.Place.PlaceStrategy.*;
 
 public abstract class Place {
 
@@ -9,32 +8,26 @@ public abstract class Place {
     protected String name;
     protected PlaceType type;
 
-    protected PlaceStrategy strategy;
+    protected PlaceStrategy strategy = BAG;
 
     /**
-     * <ransition id, number of required tokens>
-     */
-    protected Map<Integer, Integer> outArcs;
-
-    /**
-     * bag: disordered
-     * <br>
-     * fifo:  if time is different, ordering them. If time are the same, disordering them.
-     * <br>
-     *
-     * @author hxd
+     * <br>BAG : random sort the tokens.
+     * <br>FIFO : sort the tokens by their time, if exists tokens having same time, random sort this range tokens.
      */
     public enum PlaceStrategy {
         BAG, FIFO
     }
 
+    /**
+     * <br>LOCAL : a place is local if it point to a local transitions.
+     * <br>COMMUNICATING: a place is communicating if it point to a transmit transitions.
+     */
     public enum PlaceType {
-        IndividualPlace, ConnectionPlace
+        LOCAL, COMMUNICATING
     }
 
     public Place() {
-        outArcs = new HashMap<>();
-        strategy = PlaceStrategy.BAG;
+        strategy = BAG;
     }
 
     public Place(int id) {
@@ -51,15 +44,21 @@ public abstract class Place {
         return strategy;
     }
 
-    public void setPlaceStrategy(PlaceStrategy type) {
-        if (this.strategy != type) {
-            resetType(type);
+    public void setPlaceStrategy(PlaceStrategy strategy) {
+        if (this.strategy != strategy) {
+            resetStrategy(strategy);
         }
-        this.strategy = type;
+        this.strategy = strategy;
     }
 
-    private void resetType(PlaceStrategy newType) {
+    private void resetStrategy(PlaceStrategy strategy) {
         //TODO firstly, we only support BAG.
+        if (strategy == FIFO) {
+
+        }
+        else {
+
+        }
         //if it is a FIFO before resetting, we need to shuffle the queue.
 //		this.initialTokens=copyOneCollection(this.initialTokens, (newType==PlaceType.BAG?new HashBag<>():new ArrayList<>()));
 //		this.currentTokens=copyOneCollection(this.currentTokens, (newType==PlaceType.BAG?new HashBag<>():new ArrayList<>()));
@@ -79,19 +78,6 @@ public abstract class Place {
 
     public void setName(String name) {
         this.name = name;
-    }
-
-    public Map<Integer, Integer> getOutArcs() {
-        return outArcs;
-    }
-
-    public void setOutArcs(Map<Integer, Integer> outArcs) {
-        this.outArcs = outArcs;
-    }
-
-    public Place addOutput(Integer transitionId, int number) {
-        outArcs.put(transitionId, number);
-        return this;
     }
 
     public PlaceType getType() {

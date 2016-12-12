@@ -1,7 +1,7 @@
 package cn.edu.thu.jcpn.core.runtime;
 
 import cn.edu.thu.jcpn.common.Pair;
-import cn.edu.thu.jcpn.core.runtime.token.IOwner;
+import cn.edu.thu.jcpn.core.places.runtime.IOwner;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -15,7 +15,9 @@ import static cn.edu.thu.jcpn.core.runtime.GlobalClock.EventType.RUNNING;
 import static cn.edu.thu.jcpn.core.runtime.GlobalClock.EventType.SENDING;
 
 public class GlobalClock {
+
     private static Logger logger = LogManager.getLogger();
+
     private static GlobalClock globalClock = new GlobalClock();
     private long time = 0L;
 

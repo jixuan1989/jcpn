@@ -1,4 +1,4 @@
-package cn.edu.thu.jcpn.core.runtime.token;
+package cn.edu.thu.jcpn.core.runtime.tokens;
 
 import cn.edu.thu.jcpn.core.runtime.GlobalClock;
 

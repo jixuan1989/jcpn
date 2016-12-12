@@ -1,4 +1,4 @@
-package cn.edu.thu.jcpn.core.runtime.token;
+package cn.edu.thu.jcpn.core.places.runtime;
 
 /**
  * Created by leven on 2016/12/10.
