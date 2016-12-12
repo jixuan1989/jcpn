@@ -1,6 +1,6 @@
 package cn.edu.thu.jcpn.core.places.runtime;
 
-public class StringOwner implements ITarget {
+public class StringOwner implements IOwner {
 
     private String owner;
 

@@ -32,18 +32,14 @@ public class Condition {
 
         List<PlaceSet> partitions = new ArrayList<>(); // partitions which needed to be combined.
         placeSet.forEach(pid ->
-                predicateItems.keySet().forEach(partition -> {
-                    if (partition.contains(pid)) {
-                        partitions.add(partition);
-                    }
-                })
-        );
+                predicateItems.keySet().stream()
+                        .filter(partition -> partition.contains(pid))
+                        .forEach(partition -> partitions.add(partition)));
 
         // key. all relative partitions combine into one partition.
         PlaceSet combinedPartition = PlaceSet.combine(partitions);
         // value. all predicates relative to these partitions.
         Map<PlaceSet, List<Predicate<TokenSet>>> combinedPredicates = new HashMap<>();
-
         // for each partition to be combined, remove from the original map.
         // then combine multi-maps into one map.
         partitions.forEach(partition -> combinedPredicates.putAll(predicateItems.remove(partition)));

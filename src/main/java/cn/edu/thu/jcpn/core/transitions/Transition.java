@@ -20,12 +20,12 @@ public abstract class Transition {
     /**
      * <place, number of required tokens>
      */
-    protected Map<Place, Integer> inPlaces;
+    protected Set<Place> inPlaces;
 
     /**
      * <place, number of required tokens>
      */
-    protected Map<Place, Integer> outPlaces;
+    protected Set<Place> outPlaces;
 
     protected Function<TokenSet, IOutputTokenBinding> outputFunction;
 
@@ -37,34 +37,34 @@ public abstract class Transition {
         super();
         this.id = id;
         this.name = name;
-        inPlaces = new HashMap<>();
-        outPlaces = new HashMap<>();
+        inPlaces = new HashSet<>();
+        outPlaces = new HashSet<>();
         condition = new Condition();
     }
 
-    public Map<Place, Integer> getInPlaces() {
+    public Set<Place> getInPlaces() {
         return inPlaces;
     }
 
-    public void setInPlaces(Map<Place, Integer> inPlaces) {
+    public void setInPlaces(Set<Place> inPlaces) {
         this.inPlaces = inPlaces;
     }
 
-    public Transition addInput(Place place, int number) {
-        inPlaces.put(place, number);
+    public Transition addInput(Place place) {
+        inPlaces.add(place);
         return this;
     }
 
-    public Map<Place, Integer> getOutPlaces() {
+    public Set<Place> getOutPlaces() {
         return outPlaces;
     }
 
-    public void setOutPlaces(Map<Place, Integer> outPlaces) {
+    public void setOutPlaces(Set<Place> outPlaces) {
         this.outPlaces = outPlaces;
     }
 
-    public Transition addOutput(Place place, int number) {
-        outPlaces.put(place, number);
+    public Transition addOutput(Place place) {
+        outPlaces.add(place);
         return this;
     }
 

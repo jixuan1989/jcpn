@@ -13,8 +13,8 @@ import java.util.List;
  */
 public class TokenSet extends HashMap<Integer, IToken> {
 
-    private IOwner owner;
-    private ITarget target;
+    IOwner owner;
+    ITarget target;
 
     public TokenSet() {
         super();
