@@ -3,7 +3,7 @@ package cn.edu.thu.jcpn.core.places;
 import cn.edu.thu.jcpn.core.runtime.tokens.IOwner;
 import cn.edu.thu.jcpn.core.runtime.tokens.ITarget;
 import cn.edu.thu.jcpn.core.runtime.tokens.IToken;
-import cn.edu.thu.jcpn.core.runtime.tokens.NullTarget;
+import cn.edu.thu.jcpn.core.runtime.tokens.LocalAsTarget;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -23,7 +23,7 @@ public abstract class Place {
 
     /**
      * <owner, target, tokens for this target>
-     * <br>If target is NullTarget, it means the token is used locally.
+     * <br>If target is LocalAsTarget, it means the token is used locally.
      * <br>In this case, the map contains only one <target, tokens> item.
      */
     private Map<IOwner, Map<ITarget, List<IToken>>> initialTokens;
@@ -109,9 +109,9 @@ public abstract class Place {
     }
 
     public void setInitialTokens(Map<IOwner, Map<ITarget, List<IToken>>> initialTokens) {
-        initialTokens.forEach((onwer, targetTokensMap) ->
-                targetTokensMap.forEach((target, tokens) ->
-                        tokens.forEach(token -> this.addInitToken(onwer, target, token))));
+        initialTokens.forEach((owner, targetTokens) ->
+                targetTokens.forEach((target, tokens) ->
+                        tokens.forEach(token -> this.addInitToken(owner, target, token))));
     }
 
     /**
@@ -121,7 +121,7 @@ public abstract class Place {
      * @return
      */
     public Place addInitToken(IOwner owner, ITarget target, IToken token) {
-        if (target instanceof NullTarget)
+        if (target instanceof LocalAsTarget)
             this.setType(LOCAL);
         else
             this.setType(COMMUNICATING);
@@ -134,7 +134,7 @@ public abstract class Place {
         return this;
     }
 
-    public Map<ITarget, List<IToken>> getTokensByOnwer(IOwner owner) {
+    public Map<ITarget, List<IToken>> getTokensByOwner(IOwner owner) {
         return initialTokens.get(owner);
     }
 }

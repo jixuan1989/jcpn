@@ -19,6 +19,13 @@ public class RuntimePlace {
     protected PlaceType type;
     protected PlaceStrategy placeStrategy;
 
+    /**
+     * If it is a local place, then it only has a LocalAsTarget in the three tokenMaps.
+     * <br>And the type of the place is LOCAL.
+     * <br>Else, it has multi target entry, for each target, it may exists several tokens.
+     * <br>And in this case, it does not have a LocalAsTarget entry.
+     * <br>And the type of the place is COMMUNICATING.
+     */
     protected Map<ITarget, List<IToken>> newlyTokens;
     protected Map<ITarget, List<IToken>> testedTokens;
     protected Map<ITarget, List<IToken>> futureTokens;
@@ -38,7 +45,7 @@ public class RuntimePlace {
         this.futureTokens = new HashMap<>();
         this.globalClock = GlobalClock.getInstance();
 
-        place.getTokensByOnwer(this.owner).forEach(this::addTokens);
+        place.getTokensByOwner(this.owner).forEach(this::addTokens);
     }
 
     public Integer getId() {
@@ -114,28 +121,36 @@ public class RuntimePlace {
     }
 
     public void addTokens(ITarget target, List<IToken> tokens) {
-        if (this.getPlaceStrategy().equals(PlaceStrategy.BAG)) {
-            assignTokensIntoDifferentQueues(target, tokens,
-                    (token, color) -> futureTokens.get(token).add(random.nextInt(futureTokens.get(token).size() + 1), color),
-                    (token, color) -> newlyTokens.get(token).add(random.nextInt(newlyTokens.get(token).size() + 1), color));
-        } else {
-            assignTokensIntoDifferentQueues(target, tokens,
-                    (token, color) -> addTokenByTimeOrder(futureTokens.get(token), color),
-                    (token, color) -> addTokenByTimeOrder(newlyTokens.get(token), color));
+        tokens.forEach(token -> {
+            if (this.getPlaceStrategy().equals(PlaceStrategy.BAG)) {
+                futureTokens.computeIfAbsent(target, obj -> new ArrayList<>());
+                addTokenBAG(target, token);
+            }
+            else {
+                newlyTokens.computeIfAbsent(target, obj -> new ArrayList<>());
+                addTokenFIFO(target, token);
+            }
+        });
+    }
+
+    private void addTokenBAG(ITarget target, IToken token) {
+        if (token.getTime() > globalClock.getTime()) {
+            int position = random.nextInt(futureTokens.get(target).size() + 1);
+            futureTokens.get(target).add(position, token);
+        }
+        else {
+            int position = random.nextInt(newlyTokens.get(target).size() + 1);
+            newlyTokens.get(target).add(position, token);
         }
     }
 
-    private void assignTokensIntoDifferentQueues(ITarget target, List<IToken> tokens, BiConsumer<ITarget, IToken> futureConsumer, BiConsumer<ITarget, IToken> newlyConsumer) {
-        GlobalClock globalClock = GlobalClock.getInstance();
-        tokens.forEach(color -> {
-            if (color.getTime() > globalClock.getTime()) {
-                futureTokens.putIfAbsent(target, new ArrayList<>());
-                futureConsumer.accept(target, color);
-            } else {
-                newlyTokens.putIfAbsent(target, new ArrayList<>());
-                newlyConsumer.accept(target, color);
-            }
-        });
+    private void addTokenFIFO(ITarget target, IToken token) {
+        if (token.getTime() > globalClock.getTime()) {
+            addTokenByTimeOrder(futureTokens.get(target), token);
+        }
+        else {
+            addTokenByTimeOrder(newlyTokens.get(target), token);
+        }
     }
 
     /**

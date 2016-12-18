@@ -5,7 +5,7 @@ import cn.edu.thu.jcpn.core.places.runtime.RuntimePlace;
 import cn.edu.thu.jcpn.core.runtime.GlobalClock;
 import cn.edu.thu.jcpn.core.runtime.tokens.ITarget;
 import cn.edu.thu.jcpn.core.runtime.tokens.IToken;
-import cn.edu.thu.jcpn.core.runtime.tokens.NullTarget;
+import cn.edu.thu.jcpn.core.runtime.tokens.LocalAsTarget;
 import cn.edu.thu.jcpn.core.transitions.Transition;
 import cn.edu.thu.jcpn.core.transitions.condition.Condition;
 import cn.edu.thu.jcpn.core.transitions.condition.InputToken;
@@ -212,7 +212,7 @@ public class RuntimeTransition {
                 place.addTokens(outputTarget, tokens);
 
                 long time = tokens.get(0).getTime();
-                if (target instanceof NullTarget) {
+                if (target instanceof LocalAsTarget) {
                     globalClock.addAbsoluteTimepointForRunning(owner, time);
                 }
                 else {
