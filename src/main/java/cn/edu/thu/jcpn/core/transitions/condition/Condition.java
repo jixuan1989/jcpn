@@ -29,7 +29,6 @@ public class Condition {
     }
 
     public void addPredicate(PlacePartition partition, Predicate<InputToken> predicate) {
-
         List<PlacePartition> partitions = new ArrayList<>(); // partitions which needed to be combined.
         partition.forEach(pid ->
                 predicateItems.keySet().forEach(placePartition -> {
