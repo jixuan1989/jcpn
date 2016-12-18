@@ -17,34 +17,58 @@ import java.util.Map.Entry;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+/**
+ * Transition is the minimum unit to execute an event. Firstly, the individualCPN calls the
+ * hasEnableTransitions method of its transitions to get the transitions who can execute. Then the CPN random
+ * pick one transition to prepare to execute through call the specific transition's getRandmonInputToken
+ * and get the inputToken from the transition' cache. Then, use the inputToken the make the transition
+ * firing. After that, use the inputToken to clean the relative tokens in all relative transitions' caches,
+ * and the original places.
+ */
 public class RuntimeTransition {
 
-    protected int id;
-    protected String name;
-    protected IOwner owner;
-    protected int priority;
+    private int id;
+    private String name;
 
-    protected Condition condition;
-    protected Map<Integer, RuntimePlace> inPlaces;
-    protected Map<ITarget, Map<Integer, RuntimePlace>> outPlaces;
+    private IOwner owner;
+    private Set<ITarget> targets;
 
-    protected Map<ITarget, Map<PlacePartition, List<InputToken>>> cache;
+    private Map<Integer, RuntimePlace> inPlaces;
+    private Map<ITarget, Map<Integer, RuntimePlace>> outPlaces;
 
-    protected GlobalClock globalClock;
+    private Condition condition;
+    private Function<InputToken, OutputToken> outputFunction;
+
+    private Map<ITarget, Map<PlacePartition, List<InputToken>>> cache;
+    private List<ITarget> enableTargets;
+
+    private GlobalClock globalClock;
+
     protected static Random random = new Random();
 
-    protected Function<InputToken, OutputToken> outputFunction;
 
 
-    public RuntimeTransition(IOwner owner, Transition transition) {
+    public RuntimeTransition(IOwner owner, Set<ITarget> targets, Transition transition) {
         this.owner = owner;
+        this.targets = new HashSet<>(targets);
+
         id = transition.getId();
         name = transition.getName();
-        priority = transition.getPriority();
         condition = transition.getCondition();
         outputFunction = transition.getOutputFunction();
-        
+
+        initCache();
+        enableTargets = new ArrayList<>();
+
         globalClock = GlobalClock.getInstance();
+    }
+
+    public void initCache() {
+        cache = new HashMap<>();
+        targets.forEach(target -> {
+            Map<PlacePartition, List<InputToken>> targetPartitions = cache.put(target, new HashMap<>());
+            condition.getPlacePartition().forEach(partition -> targetPartitions.put(partition, new ArrayList<>()));
+        });
     }
 
     public Integer getId() {
@@ -69,14 +93,6 @@ public class RuntimeTransition {
 
     public void setOwner(IOwner owner) {
         this.owner = owner;
-    }
-
-    public int getPriority() {
-        return priority;
-    }
-
-    public void setPriority(int priority) {
-        this.priority = priority;
     }
 
     public Condition getCondition() {
@@ -117,12 +133,27 @@ public class RuntimeTransition {
      * <br> NOTICE: this class is not idempotent. That is to say, it assumes after checkNewlyTokens4Firing,
      * <br> all the newly tokens are moved into tested.
      * <br> (However, this method does not implement it, a CPNInstance class needs to control that)
-     *
      */
     public void checkNewlyTokens4Firing() {
+        // for each target, ask input places for tokens available for the target.
         outPlaces.keySet().forEach(this::checkNewlyTokens4Firing);
     }
 
+    /**
+     * For each input place, get the newly tokens which will be transmitted to the target place remotely.
+     * If the target place is locally, then getNewlyTokens action will get the newly tokens locally.
+     * <pre>
+     * It means there are two situations:
+     *      1) the transition is running locally, then it will fetch all newly tokens from the local places
+     *         whose the target type is LocalAsTarget(an only one instance from a static method of the class).
+     *      2) the transition is sending message, then it will fetch newly tokens from both local places
+     *         and communicating places. Here a target work for the communicating places, and you will get the
+     *         newly tokens to be sent to the target, meanwhile, you will get newly tokens from local places
+     *         with LocalAsTarget type.
+     * </pre>
+     *
+     * @param target
+     */
     public void checkNewlyTokens4Firing(ITarget target) {
         condition.getPlacePartition().forEach(partition -> {
             List<InputToken> availableTokens = new ArrayList<>();
@@ -152,50 +183,33 @@ public class RuntimeTransition {
         }
     }
 
-    /**
-     * remove all the candidate bindings related with the given token.
-     * <br> this method needs to be called if you find that you can not get the token any more from the input place, while the token is still in cached bindings.
-     * <br> that is to say, you should get a token firstly and then remove the token from cache immediately using this function.
-     * <br> (only multi-threads mode requires )
-     *
-     * @param inputTokens
-     */
-    public void removeTokenFromCache(InputToken inputTokens) {
-        for (Entry<Integer, IToken> inputToken : inputTokens.entrySet()) {
-
-            int pid = inputToken.getKey();
-            IToken token = inputToken.getValue();
-            ITarget target = token.getTarget();
-
-            Map<PlacePartition, List<InputToken>> partitions = cache.get(target);
-            for (Entry<PlacePartition, List<InputToken>> partitionEntry : partitions.entrySet()) {
-                PlacePartition partition = partitionEntry.getKey();
-                if (!partition.contains(pid)) continue;
-
-                List<InputToken> tokenSets = partitionEntry.getValue();
-                List<InputToken> removedTokenSets = tokenSets.stream().
-                        filter(tokenSet -> tokenSet.containsKey(pid)).collect(Collectors.toList());
-                tokenSets.removeAll(removedTokenSets);
-            }
-        }
-    }
-
-    //TODO canfire must be finished.
     public boolean canFire() {
-        for (Entry<ITarget, Map<PlacePartition, List<InputToken>>> targetEntry : cache.entrySet()) {
-            ITarget target = targetEntry.getKey();
-            Map<PlacePartition, List<InputToken>> partitions = targetEntry.getValue();
-            for (Entry<PlacePartition, List<InputToken>> partitionEntry : partitions.entrySet()) {
-                PlacePartition partition = partitionEntry.getKey();
-                List<InputToken> tokens = partitionEntry.getValue();
-                if (tokens.isEmpty()) {
-                    break;
-                }
+        enableTargets.clear();
+        cache.forEach((target, partitions) -> {
+            if (canFire(partitions)) {
+                enableTargets.add(target);
             }
-        }
-        return true;
+        });
+        return !enableTargets.isEmpty();
     }
 
+    private boolean canFire(Map<PlacePartition, List<InputToken>> partitions) {
+        return partitions.values().stream().noneMatch(List::isEmpty);
+    }
+
+    public InputToken getRandmonInputToken() {
+        ITarget target = enableTargets.get(random.nextInt(enableTargets.size()));
+        Map<PlacePartition, List<InputToken>> partitions = cache.get(target);
+        InputToken inputToken = new InputToken();
+        partitions.values().forEach(inputTokens -> inputToken.merge(inputTokens.get(0)));
+
+        return inputToken;
+    }
+
+    /**
+     * @param inputTokens
+     * @return
+     */
     public OutputToken firing(InputToken inputTokens) {
         if (outputFunction == null) return null;
         removeTokenFromCache(inputTokens);
@@ -214,9 +228,8 @@ public class RuntimeTransition {
                 long time = tokens.get(0).getTime();
                 if (target instanceof LocalAsTarget) {
                     globalClock.addAbsoluteTimepointForRunning(owner, time);
-                }
-                else {
-                    globalClock.addAbsoluteTimepointForSending(target, time);
+                } else {
+                    globalClock.addAbsoluteTimepointForSending((IOwner) target, time);
                 }
             }
         }
@@ -226,4 +239,57 @@ public class RuntimeTransition {
     public Map<ITarget, Map<PlacePartition, List<InputToken>>> getAllAvailableTokens() {
         return cache;
     }
+
+    /**
+     * remove all the candidate bindings related with the given token.
+     * <br> this method needs to be called if you find that you can not get the token any more from the input place, while the token is still in cached bindings.
+     * <br> that is to say, you should get a token firstly and then remove the token from cache immediately using this function.
+     * <br> (only multi-threads mode requires)
+     *
+     * @param inputTokens
+     */
+    public void removeTokenFromCache(InputToken inputTokens) {
+        for (Entry<Integer, IToken> inputToken : inputTokens.entrySet()) {
+
+            int pid = inputToken.getKey();
+            IToken token = inputToken.getValue();
+            ITarget target = token.getTarget();
+
+            //Map<ITarget, Map<PlacePartition, List<InputToken>>> cache
+            Map<PlacePartition, List<InputToken>> partitions = cache.get(target);
+            for (Entry<PlacePartition, List<InputToken>> partitionEntry : partitions.entrySet()) {
+                PlacePartition partition = partitionEntry.getKey();
+                if (!partition.contains(pid)) continue;
+
+                //HashMap<Integer, IToken>
+                List<InputToken> tokenSets = partitionEntry.getValue();
+                List<InputToken> removedTokenSets = tokenSets.stream().
+                        filter(tokenSet -> tokenSet.containsValue(token)).collect(Collectors.toList());
+                tokenSets.removeAll(removedTokenSets);
+            }
+        }
+    }
 }
+
+/*
+    public InputToken fire() {
+        Map<PlacePartition, Integer> selectedTokens = new HashMap<>();
+        cache.forEach((placeSet, tokenSets) -> {
+            selectedTokens.put(placeSet, random.nextInt() % tokenSets.size());
+        });
+        return this.fire(selectedTokens);
+    }
+
+    public InputToken fire(Map<PlacePartition, Integer> selectedTokens) {
+        // random get a tokenSet from each partition, and merge into one tokenSet.
+        // return it and remove from cache including all tokens relative to tokenSet.
+        // then remove tokens of this tokenSet from these origin places.
+        List<InputToken> randomTokens = new ArrayList<>();
+        cache.forEach((placeSet, tokenSets) -> {
+            InputToken temp = tokenSets.get(selectedTokens.get(placeSet));
+            randomTokens.add(temp);
+            //TODO remove chosen tokens.
+        });
+        return InputToken.combine(randomTokens);
+    }
+ */

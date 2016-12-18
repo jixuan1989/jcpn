@@ -9,4 +9,13 @@ public class LocalAsTarget implements ITarget {
     public String getName() {
         return null;
     }
+
+    private static LocalAsTarget instance = new LocalAsTarget();
+    private LocalAsTarget() {
+        super();
+    }
+
+    public static LocalAsTarget getInstance() {
+        return instance;
+    }
 }

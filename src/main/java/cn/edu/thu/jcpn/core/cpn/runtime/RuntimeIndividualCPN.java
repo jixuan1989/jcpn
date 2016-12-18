@@ -4,6 +4,7 @@ import cn.edu.thu.jcpn.core.places.Place;
 import cn.edu.thu.jcpn.core.places.runtime.*;
 import cn.edu.thu.jcpn.core.runtime.GlobalClock;
 import cn.edu.thu.jcpn.core.runtime.tokens.IOwner;
+import cn.edu.thu.jcpn.core.runtime.tokens.ITarget;
 import cn.edu.thu.jcpn.core.runtime.tokens.IToken;
 import cn.edu.thu.jcpn.core.transitions.Transition;
 import cn.edu.thu.jcpn.core.transitions.condition.InputToken;
@@ -66,8 +67,8 @@ public class RuntimeIndividualCPN {
         places.put(place.getId(), new RuntimePlace(owner, place));
     }
 
-    private void addRuntimeTransition(Transition transition) {
-        transitions.put(transition.getId(), new RuntimeTransition(owner, transition));
+    private void addRuntimeTransition(Set<ITarget> targets, Transition transition) {
+        transitions.put(transition.getId(), new RuntimeTransition(owner, targets, transition));
     }
 
     /**
@@ -77,32 +78,10 @@ public class RuntimeIndividualCPN {
      * @param places      no matter whether places have global places, we do not copy the global places in them
      * @param transitions
      */
-    public void construct(Collection<Place> places, Collection<Transition> transitions) {
+    public void construct(Set<ITarget> targets, Collection<Place> places, Collection<Transition> transitions) {
         //copy all the places and transitions first.
         places.forEach(this::addRuntimePlace);
-        transitions.forEach(this::addRuntimeTransition);
-    }
-
-    /**
-     * process all the newly tokens and update transitions' cached, then mark these tokens as tested.
-     * this method is idempotent
-     */
-    public void checkNewlyTokensAndMarkAsTested() {
-        transitions.values().forEach(RuntimeTransition::checkNewlyTokens4Firing);
-        places.values().forEach(RuntimePlace::markTokensAsTested);
-    }
-
-    /**
-     * remove selected tokens from the caches from all the transitions.
-     *
-     * @param binding
-     */
-    public void removeTokensFromAllTransitionsCache(InputToken inputTokens) {
-        transitions.values().forEach(transition -> transition.removeTokenFromCache(inputTokens));
-    }
-
-    public OutputToken fire(Integer tid, InputToken inputTokens) {
-        return transitions.get(tid).firing(inputTokens);
+        transitions.forEach(transition -> addRuntimeTransition(targets, transition));
     }
 
     /**
@@ -122,69 +101,41 @@ public class RuntimeIndividualCPN {
     }
 
     /**
+     * process all the newly tokens and update transitions' cached, then mark these tokens as tested.
+     * this method is idempotent
+     */
+    public void notifyTransitions() {
+        transitions.values().forEach(RuntimeTransition::checkNewlyTokens4Firing);
+        places.values().forEach(RuntimePlace::markTokensAsTested);
+    }
+
+    /**
      * check which transitions can be fired
      *
      * @return
      */
-    public boolean canFire() {
-        List<RuntimeTransition> canFireTransitions = this.transitions.values().stream().filter(RuntimeTransition::canFire).collect(Collectors.toList());
-        //TODO
-        // canFireTransitions.forEach(t -> enablePriorTransitions.get(t.getPriority()).add(t.getId()));
-
-        return canFireTransitions.size() > 0;
+    public boolean hasEnableTransitions() {
+        List<RuntimeTransition> enableTransitions = this.getEnableTransitions();
+        return enableTransitions.size() > 0;
     }
 
-
-    /**
-     * meaningful only when asked canFire().<br>
-     * this method is used for control cpn manually
-     */
-    public List<Integer> getCanFireTransitions() {
-        for (Map.Entry<Integer, List<Integer>> entry : enablePriorTransitions.entrySet()) {
-            if (entry.getValue().size() > 0) {
-                return entry.getValue();
-            }
-        }
-        return null;
+    private List<RuntimeTransition> getEnableTransitions() {
+        return this.transitions.values().stream().
+                filter(RuntimeTransition::canFire).collect(Collectors.toList());
     }
 
-
-    /**
-     * fire selected transition
-     *
-     * @param tid
-     * @return
-     */
-    public MixedInputTokenBinding askForFire(Integer tid) {
-        enablePriorTransitions = new HashMap<>(); // store all can fire tokens order by priority.
-        if (this.transitions.get(tid).canFire(this)) {
-            return this.transitions.get(tid).randomBinding(this);
-        } else
-            return null;
+    public RuntimeTransition randomEnable() {
+        List<RuntimeTransition> enableTransitions = this.getEnableTransitions();
+        return enableTransitions.get(random.nextInt(enableTransitions.size()));
+        // inputToken = transition.getRandomInputToken();
+        // this.firing(transition.getId(), inputToken);
     }
 
-    /**
-     * randomly select a (possible can be fired) transition to fire
-     *
-     * @return null if there is no transitions can be fired.
-     */
-    public Integer getARandomTranstionWhichCanFire() {
-        if (enablePriorTransitions.isEmpty()) canFire();
-
-        List<Integer> prioirtyFire = getCanFireTransitions();
-        if (prioirtyFire == null) {
-            return null;
-        }
-        return prioirtyFire.get(random.nextInt(prioirtyFire.size()));
-    }
-
-    /**
-     * re-check all the transitions to check whether there is a transition can be fired.
-     *
-     * @return
-     */
-    public boolean confirmNoTransitionCanFire() {
-        return this.transitions.values().stream().noneMatch(transition -> transition.canFire());
+    public OutputToken firing(RuntimeTransition transition) {
+        InputToken inputToken = transition.getRandmonInputToken();
+        transitions.values().forEach(innerTransition -> innerTransition.removeTokenFromCache(inputToken));
+        inputToken.forEach((pid, token) -> places.get(pid).removeTokenFromTest(token));
+        return transition.firing(inputToken);
     }
 
     @Override

@@ -57,7 +57,7 @@
 //        }
 //    }
 //
-//    public boolean canFire() {
+//    public boolean hasEnableTransitions() {
 //        for (Entry<PlacePartition, List<InputToken>> entry : cache.entrySet()) {
 //            if (entry.getValue().size() == 0) {
 //                return false;

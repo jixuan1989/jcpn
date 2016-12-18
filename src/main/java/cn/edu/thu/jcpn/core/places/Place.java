@@ -13,13 +13,13 @@ import java.util.Map;
 import static cn.edu.thu.jcpn.core.places.Place.PlaceStrategy.*;
 import static cn.edu.thu.jcpn.core.places.Place.PlaceType.*;
 
-public abstract class Place {
+public class Place {
 
-    protected int id;
-    protected String name;
-    protected PlaceType type;
+    private int id;
+    private String name;
+    private PlaceType type;
 
-    protected PlaceStrategy strategy = BAG;
+    private PlaceStrategy strategy = BAG;
 
     /**
      * <owner, target, tokens for this target>
@@ -111,16 +111,19 @@ public abstract class Place {
     public void setInitialTokens(Map<IOwner, Map<ITarget, List<IToken>>> initialTokens) {
         initialTokens.forEach((owner, targetTokens) ->
                 targetTokens.forEach((target, tokens) ->
-                        tokens.forEach(token -> this.addInitToken(owner, target, token))));
+                        tokens.forEach(this::addInitToken)));
     }
 
     /**
      * TODO: IF PLACE TYPE IS SET, AND A DIFFERENT TYPE TOKEN IS ADDED, A ERROR OCCURS.
-     * @param owner
+     *
      * @param token
      * @return
      */
-    public Place addInitToken(IOwner owner, ITarget target, IToken token) {
+    public Place addInitToken(IToken token) {
+        IOwner owner = token.getOwner();
+        ITarget target = token.getTarget();
+
         if (target instanceof LocalAsTarget)
             this.setType(LOCAL);
         else

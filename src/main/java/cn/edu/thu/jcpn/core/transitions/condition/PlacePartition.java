@@ -13,9 +13,9 @@ import java.util.TreeSet;
  */
 public class PlacePartition extends TreeSet<Integer> {
 
-    public static PlacePartition combine(List<PlacePartition> placeSets) {
+    public static PlacePartition combine(List<PlacePartition> partitions) {
         PlacePartition res = new PlacePartition();
-        placeSets.forEach(placeSet -> res.addAll(placeSet));
+        partitions.forEach(res::addAll);
         return res;
     }
 
@@ -25,7 +25,7 @@ public class PlacePartition extends TreeSet<Integer> {
 
     public static PlacePartition intersect(Set<Integer> first, Set<Integer> second) {
         PlacePartition res = new PlacePartition();
-        first.stream().filter(pid -> second.contains(pid)).forEach(pid -> res.add(pid));
+        first.stream().filter(second::contains).forEach(res::add);
         return res;
     }
 }

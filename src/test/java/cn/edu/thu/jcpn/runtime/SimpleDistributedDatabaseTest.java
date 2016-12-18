@@ -2,19 +2,18 @@ package cn.edu.thu.jcpn.runtime;
 
 import cn.edu.thu.jcpn.core.cpn.CPN;
 import cn.edu.thu.jcpn.core.cpn.runtime.RuntimeFoldingCPN;
-import cn.edu.thu.jcpn.core.places.CommunicatingPlace;
-import cn.edu.thu.jcpn.core.places.LocalPlace;
 import cn.edu.thu.jcpn.core.places.Place;
-import cn.edu.thu.jcpn.core.transitions.LocalTransition;
+import cn.edu.thu.jcpn.core.runtime.GlobalClock;
+import cn.edu.thu.jcpn.core.runtime.tokens.*;
 import cn.edu.thu.jcpn.core.transitions.Transition;
-import cn.edu.thu.jcpn.core.transitions.TransmitTransition;
+import cn.edu.thu.jcpn.core.transitions.condition.OutputToken;
+import cn.edu.thu.jcpn.elements.token.MessageToken;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.junit.Before;
 import org.junit.Test;
 
 import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -23,12 +22,14 @@ import java.util.stream.IntStream;
  */
 public class SimpleDistributedDatabaseTest {
 
-    public static Logger logger = LogManager.getLogger();
+    private static Logger logger = LogManager.getLogger();
 
-    public static int SERVER_NUMBER = 2;
+    private static int SERVER_NUMBER = 2;
 
-    public CPN cpn;
-    public RuntimeFoldingCPN instance;
+    private CPN cpn;
+    private RuntimeFoldingCPN instance;
+
+    private GlobalClock globalClock = GlobalClock.getInstance();
 
     @Before
     public void initSimpleDistributedDatabase() {
@@ -38,44 +39,43 @@ public class SimpleDistributedDatabaseTest {
 
         Map<Integer, Place> placeMap = new HashMap<>();
         // global placeId and placeName.
-        LocalPlace place1 = new LocalPlace(1, "local");
+        Place place1 = new Place(1, "local");
         placeMap.put(1, place1);
-        LocalPlace place2 = new LocalPlace(2, "received");
+        Place place2 = new Place(2, "received");
         placeMap.put(2, place2);
-        CommunicatingPlace place3 = new CommunicatingPlace(3, "toSend");
+        Place place3 = new Place(3, "toSend");
         placeMap.put(3, place3);
-        CommunicatingPlace place4 = new CommunicatingPlace(4, "socket");
+        Place place4 = new Place(4, "socket");
         placeMap.put(4, place4);
 
         Map<Integer, Transition> transitionMap = new HashMap<>();
         // global transitionId and transitionName.
-        LocalTransition transition1 = new LocalTransition(1, "execute");
+        Transition transition1 = new Transition(1, "execute");
         transitionMap.put(1, transition1);
-        TransmitTransition transition2 = new TransmitTransition(2, "transmit");
+        Transition transition2 = new Transition(2, "transmit");
         transitionMap.put(2, transition2);
 
-        transition1.addInput(place1, 1).addInput(place2, 1);
-        transition2.addInput(place3, 1).addInput(place3, 1);
+        transition1.addInPlace(place1).addInPlace(place2);
+        transition2.addInPlace(place3).addInPlace(place4);
 
-        transition1.addOutput(place1, 1).addOutput(place3, 1);
-        transition2.addOutput(place4, 1).addOutput(place2, 1);
+        transition1.addOutPlace(place1).addOutPlace(place3);
+        transition2.addOutPlace(place4).addOutPlace(place2);
 
-        //全局公用一个无意义的UnitColor token值,以减少生成对象次数
-        UnitColor unit = new UnitColor();
+        List<IOwner> owners = IntStream.rangeClosed(1, SERVER_NUMBER).
+                mapToObj(x -> new StringOwner("server" + x)).collect(Collectors.toList());
 
-        int[] serverIds = intArray(SERVER_NUMBER);
-        List<ITarget> owners = Arrays.stream(serverIds).mapToObj(x -> new StringOwner("server" + x)).collect(Collectors.toList());
+        //p1中保存每个服务器的一个token,用unitToken表示
+        owners.forEach(owner -> place1.addInitToken(new UnitToken(owner, LocalAsTarget.getInstance())));
 
-        //p1中保存每个服务器的一个token,用unitColor表示
-        owners.forEach(owner -> place1.addInitToken(owner, new UnitColor()));
-
-        IColor token = new ColorMessage(new AtomicInteger(0));
-        place3.addInitToken(owners.get(0), owners.get(1), token);
+        IToken token = new MessageToken(0);
+        token.setOwner(owners.get(0));
+        token.setTarget(owners.get(1));
+        place3.addInitToken(token);
 
         //p3中保存消息
         //p4中保存每个服务器和别的服务器的套接字token,也用unitColor表示
-        owners.forEach(owner -> owners.stream().filter(target -> !target.equals(owner))
-                .forEach(target -> place4.addInitToken(owner, target, new UnitColor())));
+        owners.forEach(innerOwner -> owners.stream().filter(innerTarget -> !innerTarget.equals(innerOwner)).
+                forEach(innerTarget -> place4.addInitToken(new UnitToken(innerOwner, innerTarget))));
 
         //t1,t2写output函数
         int PID_1 = 1;
@@ -83,45 +83,46 @@ public class SimpleDistributedDatabaseTest {
         int PID_3 = 3;
         int PID_4 = 4;
         transition1.setOutputFunction(
-                mixedInputTokenBinding -> { // why not (unit, colorReceived)? // outputTokenBinding no owners? local owner?
-                    ColorReceived received = (ColorReceived) mixedInputTokenBinding.getLocalTokens().get(PID_2);
-                    IColor sendMessage = new ColorMessage(new AtomicInteger(received.getReceived().intValue() + 1));
-                    return LocalOutputTokenBinding.mixBinding(
-                            Collections.singletonMap(PID_1, Collections.singletonList(new UnitColor())), // place, place IColor type.
-                            1,
-                            Collections.singletonMap(PID_3, Collections.singletonMap(received.getFrom(), Collections.singletonList(sendMessage)))
-                    );
+                inputToken -> {
+                    OutputToken outputToken = new OutputToken();
+
+                    MessageToken received = (MessageToken) inputToken.get(PID_2);
+                    MessageToken toSend = new MessageToken(received.getMessage() + 1);
+                    toSend.setOwner((IOwner) received.getTarget());
+                    toSend.setTarget(received.getOwner());
+                    toSend.setTime(globalClock.getTime() + 1);
+                    outputToken.addToken(toSend.getTarget(), PID_3, toSend);
+
+                    IToken thread = inputToken.get(PID_1);
+                    thread.setTime(globalClock.getTime() + 1);
+                    outputToken.addToken(LocalAsTarget.getInstance(), PID_1, thread);
+
+                    return outputToken;
                 }
         );
 
         transition2.setOutputFunction(
-                mixedInputTokenBinding -> {
-                    ITarget to = mixedInputTokenBinding.getTarget();
-                    ITarget owner = (ITarget) mixedInputTokenBinding.getOwner();
-                    ColorMessage toSend = (ColorMessage) mixedInputTokenBinding.getConnectionTokens().get(PID_3);
-                    ColorReceived received = new ColorReceived(owner, toSend.getMessage());
-                    return RemoteOutputTokenBinding.mixBinding(
-                            to,
-                            Collections.emptyMap(),
-                            Collections.singletonMap(PID_4, Collections.singletonMap(to, Collections.singletonList(new UnitColor()))),
-                            1,
-                            Collections.singletonMap(PID_2, Collections.singletonList(received)),
-                            1
-                    );
+                inputToken -> {
+                    OutputToken outputToken = new OutputToken();
+
+                    MessageToken toSend = (MessageToken) inputToken.get(PID_3);
+                    MessageToken received = new MessageToken(toSend.getMessage() + 1);
+                    received.setOwner((IOwner) toSend.getTarget());
+                    received.setTarget(toSend.getOwner());
+                    received.setTime(globalClock.getTime() + 1);
+                    outputToken.addToken(received.getTarget(), PID_2, toSend);
+
+                    IToken socket = inputToken.get(PID_4);
+                    socket.setTime(globalClock.getTime() + 1);
+                    outputToken.addToken(LocalAsTarget.getInstance(), PID_4, socket);
+
+                    return outputToken;
                 }
         );
 
-        cpnet.setPlaces(placeMap);
-        cpnet.setTransitions(transitionMap);
-        cpnet.preCompile();
-
-        instance = new FoldingCPNInstance(cpnet);
-    }
-
-    private int[] intArray(int n) {
-        int[] res = new int[n];
-        IntStream.rangeClosed(1, n).forEach(i -> res[i - 1] = i);
-        return res;
+        cpn.setPlaces(placeMap);
+        cpn.setTransitions(transitionMap);
+        instance = new RuntimeFoldingCPN(cpn, owners);
     }
 
     @Test

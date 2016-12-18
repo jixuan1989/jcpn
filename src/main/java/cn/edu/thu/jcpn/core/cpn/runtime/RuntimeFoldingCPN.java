@@ -3,6 +3,7 @@ package cn.edu.thu.jcpn.core.cpn.runtime;
 import cn.edu.thu.jcpn.core.cpn.CPN;
 import cn.edu.thu.jcpn.core.places.Place;
 import cn.edu.thu.jcpn.core.runtime.tokens.IOwner;
+import cn.edu.thu.jcpn.core.runtime.tokens.ITarget;
 import cn.edu.thu.jcpn.core.transitions.Transition;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -35,14 +36,20 @@ public class RuntimeFoldingCPN {
         Collection<Place> places = graph.getPlaces().values();
         Collection<Transition> transitions = graph.getTransitions().values();
 
-        owners.forEach(owner -> {
+        Set<ITarget> targets = new HashSet<>(owners);
+        for (IOwner owner : owners) {
+            targets.remove(owner);
             RuntimeIndividualCPN individualCPN = new RuntimeIndividualCPN(owner);
-            individualCPN.construct(places, transitions);
+            individualCPN.construct(targets, places, transitions);
             individualCPNs.put(owner, individualCPN);
-        });
+            targets.add(owner);
+        }
+
+        places.forEach(place -> place.getInitialTokens().forEach((owner, targetTokens)
+                -> individualCPNs.get(owner).getPlace(place.getId()).addTokens(targetTokens)));
 
         compiled = true;
-        return true;
+        return compiled;
     }
 
     public Set<IOwner> getOwners() {

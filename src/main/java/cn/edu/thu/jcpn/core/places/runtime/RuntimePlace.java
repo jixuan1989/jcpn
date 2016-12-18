@@ -6,10 +6,12 @@ import cn.edu.thu.jcpn.core.runtime.GlobalClock;
 import cn.edu.thu.jcpn.core.runtime.tokens.IOwner;
 import cn.edu.thu.jcpn.core.runtime.tokens.ITarget;
 import cn.edu.thu.jcpn.core.runtime.tokens.IToken;
+import cn.edu.thu.jcpn.core.runtime.tokens.LocalAsTarget;
 
 import java.util.*;
-import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
+
+import static cn.edu.thu.jcpn.core.places.Place.PlaceType.LOCAL;
 
 public class RuntimePlace {
 
@@ -93,7 +95,12 @@ public class RuntimePlace {
     }
 
     public List<IToken> getNewlyTokens(ITarget target) {
-        return newlyTokens.get(target);
+        if (type == LOCAL) {
+            return newlyTokens.get(LocalAsTarget.getInstance());
+        }
+        else {
+            return newlyTokens.get(target);
+        }
     }
 
     public void setNewlyTokens(Map<ITarget, List<IToken>> newlyTokens) {
@@ -121,7 +128,7 @@ public class RuntimePlace {
     }
 
     public void addTokens(ITarget target, List<IToken> tokens) {
-        tokens.forEach(token -> {
+        for (IToken token : tokens) {
             if (this.getPlaceStrategy().equals(PlaceStrategy.BAG)) {
                 futureTokens.computeIfAbsent(target, obj -> new ArrayList<>());
                 addTokenBAG(target, token);
@@ -130,7 +137,7 @@ public class RuntimePlace {
                 newlyTokens.computeIfAbsent(target, obj -> new ArrayList<>());
                 addTokenFIFO(target, token);
             }
-        });
+        }
     }
 
     private void addTokenBAG(ITarget target, IToken token) {
@@ -157,6 +164,7 @@ public class RuntimePlace {
      * add a new token into existing tokens, order by their time.
      * If there exists multi tokens whose time are equal to the newly token,
      * random insert the newly token into them.
+     * Use a binary-search algorithm here.
      *
      * @param tokens existing tokens
      * @param token new token that to be added
@@ -210,22 +218,12 @@ public class RuntimePlace {
     /**
      * move all the tokens from the newly queue to the test queue.
      */
-    public void markTokensAsTested() {
-        this.newlyTokens.forEach(this::markTokensAsTested);
-    }
-
     public void markTokensAsTested(List<IToken> tokens) {
         tokens.forEach(this::markTokenAsTested);
     }
 
-    /**
-     * TODO if not exist ?
-     * @param token
-     */
-    public void markTokenAsTested(IToken token) {
-        ITarget target = token.getTarget();
-        newlyTokens.computeIfAbsent(target, obj -> new ArrayList<>()).remove(token);
-        testedTokens.computeIfAbsent(target, obj -> new ArrayList<>()).add(token);
+    public void markTokensAsTested() {
+        this.newlyTokens.forEach(this::markTokensAsTested);
     }
 
     public void markTokensAsTested(ITarget target, List<IToken> tokens) {
@@ -236,7 +234,8 @@ public class RuntimePlace {
      * TODO if not exist ?
      * @param token
      */
-    public void markTokenAsTested(ITarget target, IToken token) {
+    public void markTokenAsTested(IToken token) {
+        ITarget target = token.getTarget();
         newlyTokens.computeIfAbsent(target, obj -> new ArrayList<>()).remove(token);
         testedTokens.computeIfAbsent(target, obj -> new ArrayList<>()).add(token);
     }
@@ -261,6 +260,10 @@ public class RuntimePlace {
             }
         }
         return false;
+    }
+
+    public void removeTokenFromTest(IToken token) {
+        removeTokenFromTest(token.getTarget(), token);
     }
 
     public void removeTokenFromTest(ITarget target, IToken token) {
