@@ -7,7 +7,26 @@ package cn.edu.thu.jcpn.core.runtime.tokens;
  */
 public abstract class IToken {
 
+    protected IOwner owner;
+    protected ITarget target;
+
     protected long time;
+
+    public IOwner getOwner() {
+        return owner;
+    }
+
+    public void setOwner(IOwner owner) {
+        this.owner = owner;
+    }
+
+    public ITarget getTarget() {
+        return target;
+    }
+
+    public void setTarget(ITarget target) {
+        this.target = target;
+    }
 
     public long getTime() {
         return time;
@@ -16,5 +35,4 @@ public abstract class IToken {
     public void setTime(long time) {
         this.time = time;
     }
-
 }

@@ -1,16 +1,23 @@
 package cn.edu.thu.jcpn.core.transitions.runtime;
 
-import cn.edu.thu.jcpn.core.places.runtime.IOwner;
+import cn.edu.thu.jcpn.core.runtime.tokens.IOwner;
 import cn.edu.thu.jcpn.core.places.runtime.RuntimePlace;
 import cn.edu.thu.jcpn.core.runtime.GlobalClock;
+import cn.edu.thu.jcpn.core.runtime.tokens.ITarget;
+import cn.edu.thu.jcpn.core.runtime.tokens.IToken;
+import cn.edu.thu.jcpn.core.runtime.tokens.NullTarget;
 import cn.edu.thu.jcpn.core.transitions.Transition;
 import cn.edu.thu.jcpn.core.transitions.condition.Condition;
-import cn.edu.thu.jcpn.core.transitions.condition.TokenSet;
+import cn.edu.thu.jcpn.core.transitions.condition.InputToken;
+import cn.edu.thu.jcpn.core.transitions.condition.OutputToken;
+import cn.edu.thu.jcpn.core.transitions.condition.PlacePartition;
 
-import java.util.Map;
-import java.util.Random;
+import java.util.*;
+import java.util.Map.Entry;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
-public abstract class RuntimeTransition {
+public class RuntimeTransition {
 
     protected int id;
     protected String name;
@@ -19,15 +26,17 @@ public abstract class RuntimeTransition {
 
     protected Condition condition;
     protected Map<Integer, RuntimePlace> inPlaces;
-    protected Map<Integer, RuntimePlace> outPlaces;
+    protected Map<ITarget, Map<Integer, RuntimePlace>> outPlaces;
+
+    protected Map<ITarget, Map<PlacePartition, List<InputToken>>> cache;
 
     protected GlobalClock globalClock;
     protected static Random random = new Random();
 
-    protected Function<TokenSet, IOutputTokenBinding> outputFunction;
+    protected Function<InputToken, OutputToken> outputFunction;
 
 
-    public RuntimeTransition(Transition transition, IOwner owner) {
+    public RuntimeTransition(IOwner owner, Transition transition) {
         this.owner = owner;
         id = transition.getId();
         name = transition.getName();
@@ -86,19 +95,19 @@ public abstract class RuntimeTransition {
         this.inPlaces = inPlaces;
     }
 
-    public Map<Integer, RuntimePlace> getOutPlaces() {
+    public Map<ITarget, Map<Integer, RuntimePlace>> getOutPlaces() {
         return outPlaces;
     }
 
-    public void setOutPlaces(Map<Integer, RuntimePlace> outPlaces) {
+    public void setOutPlaces(Map<ITarget, Map<Integer, RuntimePlace>> outPlaces) {
         this.outPlaces = outPlaces;
     }
 
-    public Function<TokenSet, IOutputTokenBinding> getOutputFunction() {
+    public Function<InputToken, OutputToken> getOutputFunction() {
         return outputFunction;
     }
 
-    public void setOutputFunction(Function<TokenSet, IOutputTokenBinding> outputFunction) {
+    public void setOutputFunction(Function<InputToken, OutputToken> outputFunction) {
         this.outputFunction = outputFunction;
     }
 
@@ -110,7 +119,38 @@ public abstract class RuntimeTransition {
      * <br> (However, this method does not implement it, a CPNInstance class needs to control that)
      *
      */
-    public abstract void checkNewlyTokens4Firing();
+    public void checkNewlyTokens4Firing() {
+        outPlaces.keySet().forEach(this::checkNewlyTokens4Firing);
+    }
+
+    public void checkNewlyTokens4Firing(ITarget target) {
+        condition.getPlacePartition().forEach(partition -> {
+            List<InputToken> availableTokens = new ArrayList<>();
+            InputToken tokenSet = new InputToken();
+            findAndSave(target, partition, tokenSet, availableTokens, 0);
+            // Map<ITarget, Map<PlacePartition, List<InputToken>>> cache;
+            cache.computeIfAbsent(target, obj -> new HashMap<>()).
+                    computeIfAbsent(partition, obj -> new ArrayList<>()).addAll(availableTokens);
+        });
+    }
+
+    private void findAndSave(ITarget target, PlacePartition partition, InputToken tokenSet, List<InputToken> availableTokens, int position) {
+        List<Integer> pids = partition.getPids();
+        if (position == pids.size()) {
+            if (condition.test(partition, tokenSet)) {
+                availableTokens.add(new InputToken(tokenSet));
+            }
+            return;
+        }
+
+        RuntimePlace place = inPlaces.get(pids.get(position));
+        List<IToken> tokens = place.getNewlyTokens(target);
+        for (int i = 0; i < tokens.size(); ++i) {
+            tokenSet.addToken(pids.get(position), tokens.get(i));
+            findAndSave(target, partition, tokenSet, availableTokens, position + 1);
+            tokenSet.removeToken(pids.get(position));
+        }
+    }
 
     /**
      * remove all the candidate bindings related with the given token.
@@ -118,31 +158,72 @@ public abstract class RuntimeTransition {
      * <br> that is to say, you should get a token firstly and then remove the token from cache immediately using this function.
      * <br> (only multi-threads mode requires )
      *
-     * @param tokenSet
+     * @param inputTokens
      */
-    public abstract void removeTokenFromCache(TokenSet tokenSet);
+    public void removeTokenFromCache(InputToken inputTokens) {
+        for (Entry<Integer, IToken> inputToken : inputTokens.entrySet()) {
 
-    public IOutputTokenBinding firing(TokenSet inputTokens) {
-        if (outputFunction == null) return null;
-        removeTokenFromCache(inputTokens);
-        IOutputTokenBinding out = this.outputFunction.apply(inputTokens);
-        modifyTokenTime(out);
-        return out;
+            int pid = inputToken.getKey();
+            IToken token = inputToken.getValue();
+            ITarget target = token.getTarget();
+
+            Map<PlacePartition, List<InputToken>> partitions = cache.get(target);
+            for (Entry<PlacePartition, List<InputToken>> partitionEntry : partitions.entrySet()) {
+                PlacePartition partition = partitionEntry.getKey();
+                if (!partition.contains(pid)) continue;
+
+                List<InputToken> tokenSets = partitionEntry.getValue();
+                List<InputToken> removedTokenSets = tokenSets.stream().
+                        filter(tokenSet -> tokenSet.containsKey(pid)).collect(Collectors.toList());
+                tokenSets.removeAll(removedTokenSets);
+            }
+        }
     }
 
-    private void modifyTokenTime(IOutputTokenBinding tokens) {
-        long time = GlobalClock.getInstance().getTime();
-        if (tokens.hasLocalForIndividualPlace()) {
-            tokens.getLocalForIndividualPlace().values().forEach(list -> list.forEach(token -> token.setTime(time + tokens.getLocalEffective())));
+    //TODO canfire must be finished.
+    public boolean canFire() {
+        for (Entry<ITarget, Map<PlacePartition, List<InputToken>>> targetEntry : cache.entrySet()) {
+            ITarget target = targetEntry.getKey();
+            Map<PlacePartition, List<InputToken>> partitions = targetEntry.getValue();
+            for (Entry<PlacePartition, List<InputToken>> partitionEntry : partitions.entrySet()) {
+                PlacePartition partition = partitionEntry.getKey();
+                List<InputToken> tokens = partitionEntry.getValue();
+                if (tokens.isEmpty()) {
+                    break;
+                }
+            }
         }
+        return true;
+    }
 
-        if (tokens.hasLocalForConnectionPlace()) {
-            tokens.getLocalForConnectionPlace().values().forEach
-                    (map -> map.values().forEach(list -> list.forEach(token -> token.setTime(time + tokens.getLocalEffective()))));
-        }
+    public OutputToken firing(InputToken inputTokens) {
+        if (outputFunction == null) return null;
+        removeTokenFromCache(inputTokens);
+        OutputToken outputTokens = this.outputFunction.apply(inputTokens);
 
-        if (tokens.isRemote()) {
-            tokens.getRemoteForIndividualPlace().values().forEach(list -> list.forEach(token -> token.setTime(time + tokens.getTargetEffective())));
+        for (Entry<ITarget, Map<Integer, List<IToken>>> targetPidTokens : outputTokens.entrySet()) {
+            ITarget target = targetPidTokens.getKey();
+            for (Entry<Integer, List<IToken>> pidTokens : targetPidTokens.getValue().entrySet()) {
+                int pid = pidTokens.getKey();
+                List<IToken> tokens = pidTokens.getValue();
+                Map<Integer, RuntimePlace> places = outPlaces.get(target);
+                RuntimePlace place = places.get(pid);
+                ITarget outputTarget = tokens.get(0).getTarget();
+                place.addTokens(outputTarget, tokens);
+
+                long time = tokens.get(0).getTime();
+                if (target instanceof NullTarget) {
+                    globalClock.addAbsoluteTimepointForRunning(owner, time);
+                }
+                else {
+                    globalClock.addAbsoluteTimepointForSending(target, time);
+                }
+            }
         }
+        return outputTokens;
+    }
+
+    public Map<ITarget, Map<PlacePartition, List<InputToken>>> getAllAvailableTokens() {
+        return cache;
     }
 }

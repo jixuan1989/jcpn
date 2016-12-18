@@ -1,7 +1,7 @@
 package cn.edu.thu.jcpn.core.runtime;
 
 import cn.edu.thu.jcpn.common.Pair;
-import cn.edu.thu.jcpn.core.places.runtime.IOwner;
+import cn.edu.thu.jcpn.core.runtime.tokens.IOwner;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;

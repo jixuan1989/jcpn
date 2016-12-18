@@ -1,13 +1,13 @@
 package cn.edu.thu.jcpn.core.cpn.runtime;
 
-import cn.edu.thu.jcpn.core.places.CommunicatingPlace;
-import cn.edu.thu.jcpn.core.places.LocalPlace;
 import cn.edu.thu.jcpn.core.places.Place;
 import cn.edu.thu.jcpn.core.places.runtime.*;
-import cn.edu.thu.jcpn.core.transitions.LocalTransition;
+import cn.edu.thu.jcpn.core.runtime.GlobalClock;
+import cn.edu.thu.jcpn.core.runtime.tokens.IOwner;
+import cn.edu.thu.jcpn.core.runtime.tokens.IToken;
 import cn.edu.thu.jcpn.core.transitions.Transition;
-import cn.edu.thu.jcpn.core.transitions.TransmitTransition;
-import cn.edu.thu.jcpn.core.transitions.runtime.RuntimeLocalTransition;
+import cn.edu.thu.jcpn.core.transitions.condition.InputToken;
+import cn.edu.thu.jcpn.core.transitions.condition.OutputToken;
 import cn.edu.thu.jcpn.core.transitions.runtime.RuntimeTransition;
 
 import org.apache.logging.log4j.LogManager;
@@ -16,14 +16,13 @@ import org.apache.logging.log4j.Logger;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import static cn.edu.thu.jcpn.core.places.Place.PlaceType.COMMUNICATING;
-import static cn.edu.thu.jcpn.core.places.Place.PlaceType.LOCAL;
-
 public class RuntimeIndividualCPN {
 
     private static Logger logger = LogManager.getLogger();
 
     private static Random random = new Random();
+
+    private GlobalClock globalClock = GlobalClock.getInstance();
 
     private IOwner owner;
     private Map<Integer, RuntimePlace> places;
@@ -63,20 +62,12 @@ public class RuntimeIndividualCPN {
         return this.places.get(id);
     }
 
-    private void addRuntimePlace(LocalPlace place) {
-        places.put(place.getId(), new RuntimeLocalPlace(place, this.owner));
+    private void addRuntimePlace(Place place) {
+        places.put(place.getId(), new RuntimePlace(owner, place));
     }
 
-    private void addRuntimePlace(CommunicatingPlace place, Set<ITarget> targets) {
-        places.put(place.getId(), new RuntimeCommunicatingPlace(place, this.owner, targets));
-    }
-
-    private void addRuntimeTransition(LocalTransition transition) {
-        transitions.put(transition.getId(), new RuntimeLocalTransition(transition, owner));
-    }
-
-    private void addRuntimeTransition(TransmitTransition transition, Set<ITarget> targets) {
-        transitions.put(transition.getId(), new RuntimeLocalTransition(transition, owner, targets));
+    private void addRuntimeTransition(Transition transition) {
+        transitions.put(transition.getId(), new RuntimeTransition(owner, transition));
     }
 
     /**
@@ -85,37 +76,11 @@ public class RuntimeIndividualCPN {
      *
      * @param places      no matter whether places have global places, we do not copy the global places in them
      * @param transitions
-     * @param targets
      */
-    public void construct(List<Place> places, List<Transition> transitions, Set<ITarget> targets) {
+    public void construct(Collection<Place> places, Collection<Transition> transitions) {
         //copy all the places and transitions first.
-        places.stream().filter(place -> place.getType() == LOCAL).forEach(place -> addRuntimePlace((LocalPlace) place));
-        places.stream().filter(place -> place.getType() == COMMUNICATING).forEach(place -> addRuntimePlace((CommunicatingPlace) place, targets));
-
-        transitions.stream().filter(transition -> transition.getType() == LOCAL).forEach(transition -> addRuntime);
-        if (!globalPlaces.isEmpty()) {
-            globalPlaces.forEach(place -> this.addPlaceInstance(place));
-        }
-
-        if (transitions.containsKey(TransitionType.IndividualTransition)) {
-            transitions.get(TransitionType.IndividualTransition).forEach
-                    (transition -> this.addTransitionInstance((IndividualTransition) transition));
-        }
-
-        if (transitions.containsKey(TransitionType.ConnectionTransition)) {
-            transitions.get(TransitionType.ConnectionTransition).forEach
-                    (transition -> this.addTransitionInstance((ConnectionTransition) transition, otherIndividuals));
-        }
-
-        this.initPriorities();
-    }
-
-    /**
-     * after construct the transitions, call this method to sort them according to the priority
-     */
-    private void initPriorities() {
-        transitions.values().forEach
-                (transition -> enablePriorTransitions.putIfAbsent(transition.getPriority(), new ArrayList<>()));
+        places.forEach(this::addRuntimePlace);
+        transitions.forEach(this::addRuntimeTransition);
     }
 
     /**
@@ -123,8 +88,8 @@ public class RuntimeIndividualCPN {
      * this method is idempotent
      */
     public void checkNewlyTokensAndMarkAsTested() {
-        transitions.values().forEach(transition -> transition.checkNewlyTokens4Firing(this));
-        places.values().forEach(place -> place.markTokensAsTested(this));
+        transitions.values().forEach(RuntimeTransition::checkNewlyTokens4Firing);
+        places.values().forEach(RuntimePlace::markTokensAsTested);
     }
 
     /**
@@ -132,100 +97,12 @@ public class RuntimeIndividualCPN {
      *
      * @param binding
      */
-    public void removeTokensFromAllTransitionsCache(MixedInputTokenBinding binding) {
-        if (binding.hasSimpleTokens()) {
-            binding.getLocalTokens().forEach((pid, token) -> {
-                PlaceInstance place = places.get(pid);
-                if (!place.getType().equals(PlaceType.GlobalPlace)) {
-                    place.getOutArcs().keySet().forEach(tid ->
-                            transitions.get(tid).removeTokenFromCache(place, token));
-                }
-            });
-        }
-
-        if (binding.hasConnectionTokens()) {
-            binding.getConnectionTokens().forEach((pid, token) -> {
-                PlaceInstance place = places.get(pid);
-                place.getOutArcs().keySet().forEach(tid ->
-                        transitions.get(tid).removeTokenFromCache(place, token, binding.getTarget()));
-            });
-        }
+    public void removeTokensFromAllTransitionsCache(InputToken inputTokens) {
+        transitions.values().forEach(transition -> transition.removeTokenFromCache(inputTokens));
     }
 
-    public IOutputTokenBinding fire(Integer tid, MixedInputTokenBinding binding) {
-        return transitions.get(tid).firing(binding);
-    }
-
-    /**
-     * after calling fire(), you must call this method because it will tell the clock the next time point.
-     * <br>
-     * this is not thread safe.
-     * <br>
-     * currently, this method is not thread safe, because ISimpleTokenBinding.addTokens is not thread safe.
-     *
-     * @param tokens
-     */
-    public void addLocalNewlyTokensAndScheduleNextTime(IOutputTokenBinding tokens) {
-        logger.trace(() -> "handling a output token binding, " + tokens.getClass().getSimpleName());
-        long time = GlobalClock.getInstance().getTime() + tokens.getLocalEffective();
-        this.scheduleNextTimeForLocal(tokens, time);
-        time = GlobalClock.getInstance().getTime() + tokens.getTargetEffective();
-        this.scheduleNextTimeForRemote(tokens, time);
-    }
-
-    private void scheduleNextTimeForLocal(IOutputTokenBinding tokens, long absoluteTime) {
-        if (tokens.hasLocalForIndividualPlace()) {
-            tokens.getLocalForIndividualPlace().forEach((pid, list) ->
-                    ((ILocalTokenOrganizator) places.get(pid)).addTokens(owner, list)
-            );
-            //TODO == 0?
-            if (tokens.getLocalEffective() != 0) {
-                logger.trace(() -> "ask for adding a new running event into the queue at time " + absoluteTime + " for owner " + owner);
-                GlobalClock.getInstance().addAbsoluteTimepointForRunning(owner, absoluteTime);
-            }
-        }
-
-        if (tokens.hasLocalForConnectionPlace()) {
-            tokens.getLocalForConnectionPlace().forEach((pid, map) ->
-                    map.forEach((target, list) -> ((ConnectionPlaceInstance) places.get(pid)).addTokens(target, list))
-            );
-            //TODO == 0?
-            if (tokens.getLocalEffective() != 0) {
-                logger.trace(() -> "ask for adding a new running event into the queue at time " + absoluteTime + " for owner " + owner);
-                GlobalClock.getInstance().addAbsoluteTimepointForRunning(owner, absoluteTime);
-            }
-        }
-    }
-
-    private void scheduleNextTimeForRemote(IOutputTokenBinding tokens, long absoluteTime) {
-        if (tokens.isRemote()) {
-            remoteSchedule.computeIfAbsent(absoluteTime, target -> newRemoteScheduleMapAtOneTime());
-            remoteSchedule.get(absoluteTime).computeIfAbsent(tokens.getTarget(), target -> newRemoteScheduleMapForOneTarget());
-            Map<Integer, List<IColor>> map = remoteSchedule.get(absoluteTime).get(tokens.getTarget());
-            tokens.getRemoteForIndividualPlace().forEach((pid, list) -> {
-                map.computeIfPresent(pid, (p, pre) -> {
-                    pre.addAll(list);
-                    return pre;
-                });
-                map.computeIfAbsent(pid, p -> new ArrayList<>(list));
-            });
-
-            //tell clock the owner will send data to others
-            if (tokens.getTargetEffective() == 0) {
-                logger.debug("the time cost of a connection transition for sending data can not be 0, it will slow down the simulation");
-            }
-
-            logger.trace(() -> "ask for adding a new sending event into the queue at time " + absoluteTime + " for owner " + owner);
-            GlobalClock.getInstance().addAbsoluteTimepointForSending(owner, absoluteTime);
-
-            //tell clock who needs to be wake up to handle data.
-            if (tokens.hasLocalForIndividualPlace() && tokens.getTargetEffective() != 0) {//TODO: whether do we need to add this condition?
-                //FIXME: tokens.hasLocalForIndividualPlace and tokens.getTargetEffective may be wrong, because one is for local event and the other is for remote event.
-                //please recheck it.
-                logger.trace(() -> "ask for adding a new running event into the queue at time " + absoluteTime + " for owner " + owner);
-                GlobalClock.getInstance().addAbsoluteTimepointForRunning(tokens.getTarget(), absoluteTime);
-            }
-        }
+    public OutputToken fire(Integer tid, InputToken inputTokens) {
+        return transitions.get(tid).firing(inputTokens);
     }
 
     /**
@@ -237,45 +114,10 @@ public class RuntimeIndividualCPN {
      * @param pid
      * @param tokens
      */
-    public void addLocalNPNewlyTokens(Integer pid, List<IColor> tokens) {
-        ILocalTokenOrganizator instance = (ILocalTokenOrganizator) places.get(pid);
+    public void addLocalNPNewlyTokens(Integer pid, List<IToken> tokens) {
+        RuntimePlace instance = places.get(pid);
         synchronized (instance) {
             instance.addTokens(owner, tokens);
-        }
-    }
-
-    /**
-     * send all the output tokens to other individual cpn instances.
-     * <br> Then, to guarantee other programs have no error, we roughly add a time point in the running time line.
-     *
-     * @param absolutiveTime
-     * @param connector
-     */
-    public void sendRemoteNewlyTokens(Long absolutiveTime, GlobalConnector connector) {
-        if (logger.isDebugEnabled()) {
-            remoteSchedule.get(absolutiveTime).forEach((target, tokens) -> logger.debug(() -> this.getOwner() + " sends " + tokens + " to " + target));
-        }
-
-        remoteSchedule.get(absolutiveTime).forEach((target, tokens) ->
-                tokens.forEach((pid, list) -> connector.submitTokensToSomeone(target, pid, list))
-        );
-
-        //if sent, we must tell the timeline to running new data
-        remoteSchedule.get(absolutiveTime).keySet().forEach(target ->
-                GlobalClock.getInstance().addAbsoluteTimepointForRunning(target, absolutiveTime)
-        );
-
-        remoteSchedule.remove(absolutiveTime);
-    }
-
-    /**
-     * this method is used for control the cpn instance manually.
-     * <br> To guarantee other programs have no error, we roughly add a time point in the running time line.
-     */
-    public void sendRemoteNewlyTokens(Long absolutiveTime, ITarget target, GlobalConnector connector) {
-        if (remoteSchedule.containsKey(absolutiveTime)) {
-            remoteSchedule.get(absolutiveTime).get(target).forEach((pid, list) -> connector.submitTokensToSomeone(target, pid, list));
-            GlobalClock.getInstance().addAbsoluteTimepointForRunning(target, absolutiveTime);
         }
     }
 
@@ -285,9 +127,9 @@ public class RuntimeIndividualCPN {
      * @return
      */
     public boolean canFire() {
-        List<TransitionInstance> canFireTransitions = this.transitions.values().stream().filter(t -> t.canFire(this)).collect(Collectors.toList());
-        this.initPriorities();
-        canFireTransitions.forEach(t -> enablePriorTransitions.get(t.getPriority()).add(t.getId()));
+        List<RuntimeTransition> canFireTransitions = this.transitions.values().stream().filter(RuntimeTransition::canFire).collect(Collectors.toList());
+        //TODO
+        // canFireTransitions.forEach(t -> enablePriorTransitions.get(t.getPriority()).add(t.getId()));
 
         return canFireTransitions.size() > 0;
     }
@@ -342,91 +184,7 @@ public class RuntimeIndividualCPN {
      * @return
      */
     public boolean confirmNoTransitionCanFire() {
-        return this.transitions.values().stream().noneMatch(transition -> transition.canFire(this));
-    }
-
-
-    /**
-     * try to digest tokens from  places.
-     * if success, the tokens will be put into binding, otherwise nothing happened
-     * (But, the related places will be taken some tokens and then returned temp).
-     * therefore, it is not a thread safe method.
-     *
-     * @param binding
-     * @return
-     */
-    public boolean trytoGetTokensFromPlaces(MixedInputTokenBinding binding) {
-        Map<Integer, IColor> simpleRemoved = new HashMap<>();
-
-        if (binding.hasSimpleTokens()) {
-            for (Map.Entry<Integer, IColor> entry : binding.getLocalTokens().entrySet()) {
-                PlaceInstance placeInstance = places.get(entry.getKey());
-                if (placeInstance.isInfiniteRead()) {//At least, global place is infiniteRead.
-                    continue;
-                }
-                if (((ILocalTokenOrganizator) placeInstance).getTestedTokens().remove(entry.getValue())) {
-                    simpleRemoved.put(entry.getKey(), entry.getValue());
-                } else {
-                    returnBack(simpleRemoved);
-                    return false;
-                }
-            }
-        }
-        Map<Integer, IColor> connectionRemoved = new HashMap<>();
-        if (binding.hasConnectionTokens()) {
-            for (Map.Entry<Integer, IColor> entry : binding.getConnectionTokens().entrySet()) {
-                PlaceInstance placeInstance = places.get(entry.getKey());
-                if (placeInstance.isInfiniteRead()) {//At least, global place is infiniteRead.
-                    continue;
-                }
-                if (((ConnectionPlaceInstance) placeInstance).getTestedTokens().get(binding.getTarget()) != null && ((ConnectionPlaceInstance) placeInstance).getTestedTokens().get(binding.getTarget()).remove(entry.getValue())) {
-                    connectionRemoved.put(entry.getKey(), entry.getValue());
-                } else {
-                    returnBack(simpleRemoved);
-                    returnBack(connectionRemoved, binding.getTarget());
-                    return false;
-                }
-            }
-        }
-        return true;
-    }
-
-    private void returnBack(Map<Integer, IColor> removed) {
-        for (Map.Entry<Integer, IColor> entry : removed.entrySet()) {
-            PlaceInstance placeInstance = places.get(entry.getKey());
-            if (placeInstance.getType().equals(PlaceType.GlobalPlace)) {
-                //global place do not consume tokens
-                logger.warn("global place should not be put into a removed map, please optimize your program");
-                continue;
-            }
-            if (placeInstance.getPlaceStrategy().equals(PlaceStrategy.BAG)) {
-                ((ILocalTokenOrganizator) placeInstance).getTestedTokens().add(entry.getValue());
-            } else {
-                ((ILocalTokenOrganizator) placeInstance).getTestedTokens().add(0, entry.getValue());
-            }
-        }
-    }
-
-    private void returnBack(Map<Integer, IColor> removed, ITarget target) {
-        for (Map.Entry<Integer, IColor> entry : removed.entrySet()) {
-            ConnectionPlaceInstance placeInstance = (ConnectionPlaceInstance) places.get(entry.getKey());
-            placeInstance.getTestedTokens().computeIfAbsent(target, t -> new ArrayList<>());
-            if (placeInstance.getPlaceStrategy().equals(PlaceStrategy.BAG)) {
-                placeInstance.getTestedTokens().get(target).add(entry.getValue());
-            } else {
-                placeInstance.getTestedTokens().get(target).add(0, entry.getValue());
-            }
-        }
-    }
-
-    public String printAllTokens() {
-        return "ICPN [owner=" + owner + ", places=" + places + "]";
-    }
-
-    public String printInterestingTokens(int[] pids) {
-        Set<Integer> pidSet = new HashSet<>();
-        Arrays.stream(pids).forEach(pid -> pidSet.add(pid));
-        return "ICPN [owner=" + owner + ", places=" + places.values().stream().filter(p -> pidSet.contains(p.getId())).collect(Collectors.toList()) + "]";
+        return this.transitions.values().stream().noneMatch(transition -> transition.canFire());
     }
 
     @Override
@@ -435,8 +193,6 @@ public class RuntimeIndividualCPN {
     }
 
     public void logStatus() {
-        places.forEach((owner, place) -> {
-            place.logStatus();
-        });
+        places.values().forEach(RuntimePlace::logStatus);
     }
 }

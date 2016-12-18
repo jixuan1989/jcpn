@@ -1,4 +1,4 @@
-package cn.edu.thu.jcpn.core.places.runtime;
+package cn.edu.thu.jcpn.core.runtime.tokens;
 
 public class StringOwner implements ITarget {
 

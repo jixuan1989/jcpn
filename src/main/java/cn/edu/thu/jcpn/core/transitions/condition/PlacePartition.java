@@ -11,20 +11,20 @@ import java.util.TreeSet;
  *
  * Created by leven on 2016/12/7.
  */
-public class PlaceSet extends TreeSet<Integer> {
+public class PlacePartition extends TreeSet<Integer> {
 
-    public static PlaceSet combine(List<PlaceSet> placeSets) {
-        PlaceSet res = new PlaceSet();
+    public static PlacePartition combine(List<PlacePartition> placeSets) {
+        PlacePartition res = new PlacePartition();
         placeSets.forEach(placeSet -> res.addAll(placeSet));
         return res;
     }
 
     public List<Integer> getPids() {
-        return new ArrayList<Integer>(this);
+        return new ArrayList<>(this);
     }
 
-    public static PlaceSet intersect(Set<Integer> first, Set<Integer> second) {
-        PlaceSet res = new PlaceSet();
+    public static PlacePartition intersect(Set<Integer> first, Set<Integer> second) {
+        PlacePartition res = new PlacePartition();
         first.stream().filter(pid -> second.contains(pid)).forEach(pid -> res.add(pid));
         return res;
     }

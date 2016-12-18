@@ -1,6 +1,17 @@
 package cn.edu.thu.jcpn.core.places;
 
+import cn.edu.thu.jcpn.core.runtime.tokens.IOwner;
+import cn.edu.thu.jcpn.core.runtime.tokens.ITarget;
+import cn.edu.thu.jcpn.core.runtime.tokens.IToken;
+import cn.edu.thu.jcpn.core.runtime.tokens.NullTarget;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 import static cn.edu.thu.jcpn.core.places.Place.PlaceStrategy.*;
+import static cn.edu.thu.jcpn.core.places.Place.PlaceType.*;
 
 public abstract class Place {
 
@@ -9,6 +20,13 @@ public abstract class Place {
     protected PlaceType type;
 
     protected PlaceStrategy strategy = BAG;
+
+    /**
+     * <owner, target, tokens for this target>
+     * <br>If target is NullTarget, it means the token is used locally.
+     * <br>In this case, the map contains only one <target, tokens> item.
+     */
+    private Map<IOwner, Map<ITarget, List<IToken>>> initialTokens;
 
     /**
      * <br>BAG : random sort the tokens.
@@ -28,6 +46,7 @@ public abstract class Place {
 
     public Place() {
         strategy = BAG;
+        initialTokens = new HashMap<>();
     }
 
     public Place(int id) {
@@ -59,9 +78,6 @@ public abstract class Place {
         else {
 
         }
-        //if it is a FIFO before resetting, we need to shuffle the queue.
-//		this.initialTokens=copyOneCollection(this.initialTokens, (newType==PlaceType.BAG?new HashBag<>():new ArrayList<>()));
-//		this.currentTokens=copyOneCollection(this.currentTokens, (newType==PlaceType.BAG?new HashBag<>():new ArrayList<>()));
     }
 
     public int getId() {
@@ -86,5 +102,39 @@ public abstract class Place {
 
     public void setType(PlaceType type) {
         this.type = type;
+    }
+
+    public Map<IOwner, Map<ITarget, List<IToken>>> getInitialTokens() {
+        return initialTokens;
+    }
+
+    public void setInitialTokens(Map<IOwner, Map<ITarget, List<IToken>>> initialTokens) {
+        initialTokens.forEach((onwer, targetTokensMap) ->
+                targetTokensMap.forEach((target, tokens) ->
+                        tokens.forEach(token -> this.addInitToken(onwer, target, token))));
+    }
+
+    /**
+     * TODO: IF PLACE TYPE IS SET, AND A DIFFERENT TYPE TOKEN IS ADDED, A ERROR OCCURS.
+     * @param owner
+     * @param token
+     * @return
+     */
+    public Place addInitToken(IOwner owner, ITarget target, IToken token) {
+        if (target instanceof NullTarget)
+            this.setType(LOCAL);
+        else
+            this.setType(COMMUNICATING);
+
+        // 1) check whether the owner exists.
+        // 2) check the target for the owner exists.
+        // 3) add the token into the target's token list.
+        initialTokens.computeIfAbsent(owner, obj -> new HashMap<>()).
+                computeIfAbsent(target, obj -> new ArrayList<>()).add(token);
+        return this;
+    }
+
+    public Map<ITarget, List<IToken>> getTokensByOnwer(IOwner owner) {
+        return initialTokens.get(owner);
     }
 }

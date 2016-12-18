@@ -2,10 +2,12 @@ package cn.edu.thu.jcpn.core.transitions;
 
 import cn.edu.thu.jcpn.core.places.Place;
 import cn.edu.thu.jcpn.core.transitions.condition.Condition;
-import cn.edu.thu.jcpn.core.transitions.condition.PlaceSet;
-import cn.edu.thu.jcpn.core.transitions.condition.TokenSet;
+import cn.edu.thu.jcpn.core.transitions.condition.InputToken;
+import cn.edu.thu.jcpn.core.transitions.condition.OutputToken;
+import cn.edu.thu.jcpn.core.transitions.condition.PlacePartition;
 
 import java.util.*;
+import java.util.function.Function;
 import java.util.function.Predicate;
 
 public abstract class Transition {
@@ -17,17 +19,10 @@ public abstract class Transition {
 
     protected Condition condition;
 
-    /**
-     * <place, number of required tokens>
-     */
-    protected Map<Place, Integer> inPlaces;
+    protected Set<Place> inPlaces;
+    protected Set<Place> outPlaces;
 
-    /**
-     * <place, number of required tokens>
-     */
-    protected Map<Place, Integer> outPlaces;
-
-    protected Function<TokenSet, IOutputTokenBinding> outputFunction;
+    protected Function<InputToken, OutputToken> outputFunction;
 
     public enum TransitionType {
         LOCAL, TRANSMIT
@@ -37,34 +32,34 @@ public abstract class Transition {
         super();
         this.id = id;
         this.name = name;
-        inPlaces = new HashMap<>();
-        outPlaces = new HashMap<>();
+        inPlaces = new HashSet<>();
+        outPlaces = new HashSet<>();
         condition = new Condition();
     }
 
-    public Map<Place, Integer> getInPlaces() {
+    public Set<Place> getInPlaces() {
         return inPlaces;
     }
 
-    public void setInPlaces(Map<Place, Integer> inPlaces) {
+    public void setInPlaces(Set<Place> inPlaces) {
         this.inPlaces = inPlaces;
     }
 
-    public Transition addInput(Place place, int number) {
-        inPlaces.put(place, number);
+    public Transition addInput(Place place) {
+        inPlaces.add(place);
         return this;
     }
 
-    public Map<Place, Integer> getOutPlaces() {
+    public Set<Place> getOutPlaces() {
         return outPlaces;
     }
 
-    public void setOutPlaces(Map<Place, Integer> outPlaces) {
+    public void setOutPlaces(Set<Place> outPlaces) {
         this.outPlaces = outPlaces;
     }
 
-    public Transition addOutput(Place place, int number) {
-        outPlaces.put(place, number);
+    public Transition addOutput(Place place) {
+        outPlaces.add(place);
         return this;
     }
 
@@ -103,15 +98,19 @@ public abstract class Transition {
     /**
      * @param outputFunction notice the time cost is relative time rather than absolute time
      */
-    public void setOutputFunction(Function<TokenSet, IOutputTokenBinding> outputFunction) {
+    public void setOutputFunction(Function<InputToken, OutputToken> outputFunction) {
         this.outputFunction = outputFunction;
+    }
+
+    public Function<InputToken, OutputToken> getOutputFunction() {
+        return outputFunction;
     }
 
     public Condition getCondition() {
         return condition;
     }
 
-    public void addCondition(PlaceSet placeSet, Predicate<TokenSet> predicate) {
+    public void addCondition(PlacePartition placeSet, Predicate<InputToken> predicate) {
         condition.addPredicate(placeSet, predicate);
     }
 }
@@ -119,17 +118,17 @@ public abstract class Transition {
 /*
     public void complie() {
         condition.getPlacePartition().forEach(partition -> {
-            List<TokenSet> availableTokens = new ArrayList<>();
-            TokenSet tokenSet = new TokenSet();
+            List<InputToken> availableTokens = new ArrayList<>();
+            InputToken tokenSet = new InputToken();
             findAndSave(availableTokens, partition, tokenSet, partition.getPids(), 0);
             cache.put(partition, new ArrayList<>()).addAll(availableTokens);
         });
     }
 
-    private void findAndSave(List<TokenSet> availableTokens, PlaceSet placeSet, TokenSet tokenSet, Integer[] pids, int position) {
+    private void findAndSave(List<InputToken> availableTokens, PlacePartition placeSet, InputToken tokenSet, Integer[] pids, int position) {
         if (position == pids.length) {
             if (condition.test(placeSet, tokenSet)) {
-                availableTokens.add(new TokenSet(tokenSet));
+                availableTokens.add(new InputToken(tokenSet));
             }
             return;
         }
@@ -144,7 +143,7 @@ public abstract class Transition {
     }
 
     public boolean canFire() {
-        for (Entry<PlaceSet, List<TokenSet>> entry : cache.entrySet()) {
+        for (Entry<PlacePartition, List<InputToken>> entry : cache.entrySet()) {
             if (entry.getValue().size() == 0) {
                 return false;
             }
@@ -152,28 +151,28 @@ public abstract class Transition {
         return true;
     }
 
-    public TokenSet fire() {
-        Map<PlaceSet, Integer> selectedTokens = new HashMap<>();
+    public InputToken fire() {
+        Map<PlacePartition, Integer> selectedTokens = new HashMap<>();
         cache.forEach((placeSet, tokenSets) -> {
             selectedTokens.put(placeSet, random.nextInt() % tokenSets.size());
         });
         return this.fire(selectedTokens);
     }
 
-    public TokenSet fire(Map<PlaceSet, Integer> selectedTokens) {
+    public InputToken fire(Map<PlacePartition, Integer> selectedTokens) {
         // random get a tokenSet from each partition, and merge into one tokenSet.
         // return it and remove from cache including all tokens relative to tokenSet.
         // then remove tokens of this tokenSet from these origin places.
-        List<TokenSet> randomTokens = new ArrayList<>();
+        List<InputToken> randomTokens = new ArrayList<>();
         cache.forEach((placeSet, tokenSets) -> {
-            TokenSet temp = tokenSets.get(selectedTokens.get(placeSet));
+            InputToken temp = tokenSets.get(selectedTokens.get(placeSet));
             randomTokens.add(temp);
             //TODO remove chosen tokens.
         });
-        return TokenSet.combine(randomTokens);
+        return InputToken.combine(randomTokens);
     }
 
-    public Map<PlaceSet, List<TokenSet>> getAllPartitionsAvailableTokens() {
+    public Map<PlacePartition, List<InputToken>> getAllPartitionsAvailableTokens() {
         return cache;
     }
  */

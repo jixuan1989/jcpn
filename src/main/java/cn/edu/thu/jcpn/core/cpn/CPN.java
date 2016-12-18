@@ -41,6 +41,10 @@ public class CPN {
         return places.get(placeId);
     }
 
+    public void addPlace(int id, Place place) {
+        places.put(id, place);
+    }
+
     public Place removePlace(int id) {
         return places.remove(id);
     }
@@ -51,6 +55,10 @@ public class CPN {
 
     public void setTransitions(Map<Integer, Transition> transitions) {
         this.transitions = transitions;
+    }
+
+    public void addTransition(int id, Transition transition) {
+        transitions.put(id, transition);
     }
 
     public Transition removeTransition(int id) {
