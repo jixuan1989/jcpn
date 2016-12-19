@@ -110,7 +110,7 @@ public class SimpleDistributedDatabaseTest {
                     received.setOwner((IOwner) toSend.getTarget());
                     received.setTarget(toSend.getOwner());
                     received.setTime(globalClock.getTime() + 1);
-                    outputToken.addToken(received.getTarget(), PID_2, toSend);
+                    outputToken.addToken(received.getTarget(), PID_2, received);
 
                     IToken socket = inputToken.get(PID_4);
                     socket.setTime(globalClock.getTime() + 1);
@@ -154,7 +154,7 @@ public class SimpleDistributedDatabaseTest {
             Set<IOwner> runnings = engine.getNextRunningInstances(time);
             if (runnings != null) {
                 // runnings.parallelStream().forEach(owner -> {
-                runnings.stream().forEach(owner -> {
+                runnings.forEach(owner -> {
                     while (!engine.hasNextSendingTime()) {
                         List<Integer> tids = engine.getAllPossibleFire(owner);
                         if (tids.size() > 0) {

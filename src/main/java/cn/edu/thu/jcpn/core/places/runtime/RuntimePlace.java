@@ -124,19 +124,22 @@ public class RuntimePlace {
     }
 
     public void addTokens(Map<ITarget, List<IToken>> targetTokens) {
-        targetTokens.forEach(this::addTokens);
+        targetTokens.values().forEach(this::addTokens);
     }
 
-    public void addTokens(ITarget target, List<IToken> tokens) {
-        for (IToken token : tokens) {
-            if (this.getPlaceStrategy().equals(PlaceStrategy.BAG)) {
-                futureTokens.computeIfAbsent(target, obj -> new ArrayList<>());
-                addTokenBAG(target, token);
-            }
-            else {
-                newlyTokens.computeIfAbsent(target, obj -> new ArrayList<>());
-                addTokenFIFO(target, token);
-            }
+    public void addTokens(List<IToken> tokens) {
+        tokens.forEach(this::addToken);
+    }
+
+    public void addToken(IToken token) {
+        ITarget target = token.getTarget();
+        if (this.getPlaceStrategy().equals(PlaceStrategy.BAG)) {
+            futureTokens.computeIfAbsent(target, obj -> new ArrayList<>());
+            addTokenBAG(target, token);
+        }
+        else {
+            newlyTokens.computeIfAbsent(target, obj -> new ArrayList<>());
+            addTokenFIFO(target, token);
         }
     }
 

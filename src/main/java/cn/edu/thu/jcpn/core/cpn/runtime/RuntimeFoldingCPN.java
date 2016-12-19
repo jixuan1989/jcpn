@@ -22,7 +22,7 @@ public class RuntimeFoldingCPN {
     public RuntimeFoldingCPN(CPN graph, List<IOwner> owners) {
         this.graph = graph;
         individualCPNs = new HashMap<>();
-        compile(owners);
+        this.compile();
     }
 
     /**
@@ -30,12 +30,13 @@ public class RuntimeFoldingCPN {
      *
      * @return
      */
-    public boolean compile(List<IOwner> owners) {
+    public boolean compile() {
         if (compiled) return true;
 
         Collection<Place> places = graph.getPlaces().values();
         Collection<Transition> transitions = graph.getTransitions().values();
 
+        Set<IOwner> owners = individualCPNs.keySet();
         Set<ITarget> targets = new HashSet<>(owners);
         for (IOwner owner : owners) {
             targets.remove(owner);
@@ -58,6 +59,10 @@ public class RuntimeFoldingCPN {
 
     public boolean isCompiled() {
         return compiled;
+    }
+
+    public RuntimeIndividualCPN getIndividualCPN(IOwner owner) {
+        return individualCPNs.get(owner);
     }
 
     public void logStatus() {

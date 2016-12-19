@@ -1,5 +1,7 @@
 package cn.edu.thu.jcpn.core.transitions.runtime;
 
+import cn.edu.thu.jcpn.core.cpn.runtime.RuntimeFoldingCPN;
+import cn.edu.thu.jcpn.core.cpn.runtime.RuntimeIndividualCPN;
 import cn.edu.thu.jcpn.core.runtime.tokens.IOwner;
 import cn.edu.thu.jcpn.core.places.runtime.RuntimePlace;
 import cn.edu.thu.jcpn.core.runtime.GlobalClock;
@@ -44,11 +46,14 @@ public class RuntimeTransition {
 
     private GlobalClock globalClock;
 
-    protected static Random random = new Random();
+    private static Random random = new Random();
 
+    /**
+     * Only use for fetch the places of tokens' targets.
+     */
+    private RuntimeFoldingCPN foldingCPN;
 
-
-    public RuntimeTransition(IOwner owner, Set<ITarget> targets, Transition transition) {
+    public RuntimeTransition(IOwner owner, Set<ITarget> targets, Transition transition, RuntimeFoldingCPN foldingCPN) {
         this.owner = owner;
         this.targets = new HashSet<>(targets);
 
@@ -59,6 +64,8 @@ public class RuntimeTransition {
 
         initCache();
         enableTargets = new ArrayList<>();
+
+        this.foldingCPN = foldingCPN;
 
         globalClock = GlobalClock.getInstance();
     }
@@ -217,23 +224,34 @@ public class RuntimeTransition {
 
         for (Entry<ITarget, Map<Integer, List<IToken>>> targetPidTokens : outputTokens.entrySet()) {
             ITarget target = targetPidTokens.getKey();
+
+            long time = globalClock.getTime();
             for (Entry<Integer, List<IToken>> pidTokens : targetPidTokens.getValue().entrySet()) {
                 int pid = pidTokens.getKey();
                 List<IToken> tokens = pidTokens.getValue();
-                Map<Integer, RuntimePlace> places = outPlaces.get(target);
-                RuntimePlace place = places.get(pid);
-                ITarget outputTarget = tokens.get(0).getTarget();
-                place.addTokens(outputTarget, tokens);
+                RuntimePlace targetPlace = getOutPlace(target, pid);
+                targetPlace.addTokens(tokens);
 
-                long time = tokens.get(0).getTime();
-                if (target instanceof LocalAsTarget) {
-                    globalClock.addAbsoluteTimepointForRunning(owner, time);
-                } else {
-                    globalClock.addAbsoluteTimepointForSending((IOwner) target, time);
-                }
+                time = tokens.get(0).getTime();
+            }
+            // register a event in the timeline.
+            if (target instanceof LocalAsTarget) {
+                globalClock.addAbsoluteTimepointForRunning(owner, time);
+            } else {
+                globalClock.addAbsoluteTimepointForSending((IOwner) target, time);
             }
         }
         return outputTokens;
+    }
+
+    private RuntimePlace getOutPlace(ITarget target, int pid) {
+        Map<Integer, RuntimePlace> targetPlaces = outPlaces.computeIfAbsent(target, obj -> new HashMap<>());
+        if (targetPlaces.isEmpty()) {
+            RuntimeIndividualCPN targetCPN = foldingCPN.getIndividualCPN((IOwner) target);
+            RuntimePlace targetPlace = targetCPN.getPlace(pid);
+            targetPlaces.put(pid, targetPlace);
+        }
+        return targetPlaces.get(pid);
     }
 
     public Map<ITarget, Map<PlacePartition, List<InputToken>>> getAllAvailableTokens() {
