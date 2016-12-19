@@ -47,7 +47,7 @@ public class RuntimePlace {
         this.futureTokens = new HashMap<>();
         this.globalClock = GlobalClock.getInstance();
 
-        place.getTokensByOwner(this.owner).forEach(this::addTokens);
+        this.addTokens(place.getTokensByOwner(this.owner));
     }
 
     public Integer getId() {
