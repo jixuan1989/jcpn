@@ -143,7 +143,7 @@ public class RuntimeTransition {
      */
     public void checkNewlyTokens4Firing() {
         // for each target, ask input places for tokens available for the target.
-        outPlaces.keySet().forEach(this::checkNewlyTokens4Firing);
+        targets.forEach(this::checkNewlyTokens4Firing);
     }
 
     /**

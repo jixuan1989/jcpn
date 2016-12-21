@@ -42,7 +42,7 @@ public class GlobalClock {
     ConcurrentSkipListMap<Long, Map<IOwner, Object>> timelineForSending = new ConcurrentSkipListMap<>();
 
     public void addAbsoluteTimepointForRunning(IOwner owner, long absolutiveTime) {
-        timelineForRunning.putIfAbsent(absolutiveTime, new ConcurrentHashMap<>()).put(owner, owner);
+        timelineForRunning.computeIfAbsent(absolutiveTime, obj -> new ConcurrentHashMap<>()).put(owner, owner);
     }
 
     /**
@@ -52,7 +52,7 @@ public class GlobalClock {
      * @param absolutiveTime
      */
     public void addAbsoluteTimepointForSending(IOwner owner, long absolutiveTime) {
-        timelineForSending.putIfAbsent(absolutiveTime, new ConcurrentHashMap<>()).put(owner, owner);
+        timelineForSending.computeIfAbsent(absolutiveTime, obj -> new ConcurrentHashMap<>()).put(owner, owner);
     }
 
     public boolean hasNextRunningTime() {

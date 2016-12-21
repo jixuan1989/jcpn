@@ -3,6 +3,7 @@ package cn.edu.thu.jcpn.runtime;
 import cn.edu.thu.jcpn.core.cpn.CPN;
 import cn.edu.thu.jcpn.core.cpn.runtime.RuntimeFoldingCPN;
 import cn.edu.thu.jcpn.core.places.Place;
+import cn.edu.thu.jcpn.core.runtime.AutoSimulator;
 import cn.edu.thu.jcpn.core.runtime.GlobalClock;
 import cn.edu.thu.jcpn.core.runtime.tokens.*;
 import cn.edu.thu.jcpn.core.transitions.Transition;
@@ -27,6 +28,7 @@ public class SimpleDistributedDatabaseTest {
     private static int SERVER_NUMBER = 2;
 
     private CPN cpn;
+    private List<IOwner> owners;
     private RuntimeFoldingCPN instance;
 
     private GlobalClock globalClock = GlobalClock.getInstance();
@@ -61,7 +63,7 @@ public class SimpleDistributedDatabaseTest {
         transition1.addOutPlace(place1).addOutPlace(place3);
         transition2.addOutPlace(place4).addOutPlace(place2);
 
-        List<IOwner> owners = IntStream.rangeClosed(1, SERVER_NUMBER).
+        owners = IntStream.rangeClosed(1, SERVER_NUMBER).
                 mapToObj(x -> new StringOwner("server" + x)).collect(Collectors.toList());
 
         //p1中保存每个服务器的一个token,用unitToken表示
@@ -127,60 +129,11 @@ public class SimpleDistributedDatabaseTest {
 
     @Test
     public void test0() throws InterruptedException {
-        ManualSimulationEngine engine = new ManualSimulationEngine(instance, NORMAL);
-        engine.compile();
-        //#!对于每个transition耗时为0的情况下,下面的代码不正确。。需要修正。
-        logger.info("hi");
-        int count = 0;
-        while (engine.hasNextTime()) {
+        AutoSimulator simulator = new AutoSimulator(instance);
+        simulator.compile();
 
-            System.out.println("count :" + count + " -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --");
-
-            if (count++ > 25) {
-                break;
-            }
-
-            long time = engine.getNextTimepoint();
-            Set<IOwner> sendings = engine.getNextSendingInstances(time);
-            if (sendings != null) {
-                //logger.info("sending size: " + sendings.size());
-                sendings.forEach(sender -> logger.info("sender :" + sender));
-                sendings.forEach(owner -> {
-                    Set<ITarget> targets = engine.getAllSendingTargets(time, owner);
-                    targets.forEach(target -> engine.runNextSendingEvent(time, owner, target));
-                });
-            }
-
-            Set<IOwner> runnings = engine.getNextRunningInstances(time);
-            if (runnings != null) {
-                // runnings.parallelStream().forEach(owner -> {
-                runnings.forEach(owner -> {
-                    while (!engine.hasNextSendingTime()) {
-                        List<Integer> tids = engine.getAllPossibleFire(owner);
-                        if (tids.size() > 0) {
-                            Collections.shuffle(tids);
-                            tids.forEach(tid -> {
-
-                                        engine.logData();
-                                        MixedInputTokenBinding binding = engine.askForBinding(owner, tid);
-                                        IOutputTokenBinding output = engine.fire(owner, tid, binding);
-
-                                        if (tid.equals(1)) {
-                                            //execute received message
-                                            logger.info(() -> String.format("%s handles the message %d from %s", owner.getName(), ((ColorReceived) binding.getLocalTokens().get(2)).getReceived().intValue(), ((ColorReceived) binding.getLocalTokens().get(2)).getFrom().getName()));
-                                        } else {
-                                            //send a new message to
-                                            logger.info(() -> String.format("%s sends the message %d to %s", owner.getName(), ((ColorMessage) binding.getConnectionTokens().get(3)).getMessage().intValue(), binding.getTarget()));
-                                        }
-                                    }
-                            );
-
-                        } else {
-                            break;
-                        }
-                    }
-                });
-            }
+        while (simulator.hasNextTime()) {
+            simulator.nextRound();
         }
     }
 }

@@ -75,8 +75,8 @@ public class Simulator {
         this.status = Status.RUNNING;
         if (!foldingCPN.isCompiled()) {
             foldingCPN.compile();
-            foldingCPN.getOwners().forEach(owner -> clock.addAbsoluteTimepointForRunning(owner, 0L));
         }
+        foldingCPN.getOwners().forEach(owner -> clock.addAbsoluteTimepointForRunning(owner, 0L));
     }
 
     /**

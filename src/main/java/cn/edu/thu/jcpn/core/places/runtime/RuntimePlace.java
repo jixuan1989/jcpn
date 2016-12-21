@@ -124,21 +124,28 @@ public class RuntimePlace {
     }
 
     public void addTokens(Map<ITarget, List<IToken>> targetTokens) {
+        if (null == targetTokens) return;
+
         targetTokens.values().forEach(this::addTokens);
     }
 
     public void addTokens(List<IToken> tokens) {
+        if (null == tokens) return;
+
         tokens.forEach(this::addToken);
     }
 
     public void addToken(IToken token) {
+        if (null == token) return;
+
         ITarget target = token.getTarget();
+        futureTokens.computeIfAbsent(target, obj -> new ArrayList<>());
+        newlyTokens.computeIfAbsent(target, obj -> new ArrayList<>());
+
         if (this.getPlaceStrategy().equals(PlaceStrategy.BAG)) {
-            futureTokens.computeIfAbsent(target, obj -> new ArrayList<>());
             addTokenBAG(target, token);
         }
         else {
-            newlyTokens.computeIfAbsent(target, obj -> new ArrayList<>());
             addTokenFIFO(target, token);
         }
     }

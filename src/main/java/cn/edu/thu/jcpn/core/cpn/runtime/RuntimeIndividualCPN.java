@@ -29,10 +29,14 @@ public class RuntimeIndividualCPN {
     private Map<Integer, RuntimePlace> places;
     private Map<Integer, RuntimeTransition> transitions;
 
-    public RuntimeIndividualCPN(IOwner owner) {
+    private RuntimeFoldingCPN foldingCPN;
+
+    public RuntimeIndividualCPN(IOwner owner, RuntimeFoldingCPN foldingCPN) {
         this.owner = owner;
         places = new HashMap<>();
         transitions = new HashMap<>();
+
+        this.foldingCPN = foldingCPN;
     }
 
     public IOwner getOwner() {
@@ -68,7 +72,7 @@ public class RuntimeIndividualCPN {
     }
 
     private void addRuntimeTransition(Set<ITarget> targets, Transition transition) {
-        transitions.put(transition.getId(), new RuntimeTransition(owner, targets, transition));
+        transitions.put(transition.getId(), new RuntimeTransition(owner, targets, transition, foldingCPN));
     }
 
     /**
@@ -96,7 +100,7 @@ public class RuntimeIndividualCPN {
     public void addLocalNPNewlyTokens(Integer pid, List<IToken> tokens) {
         RuntimePlace instance = places.get(pid);
         synchronized (instance) {
-            instance.addTokens(owner, tokens);
+            instance.addTokens(tokens);
         }
     }
 
@@ -127,8 +131,6 @@ public class RuntimeIndividualCPN {
     public RuntimeTransition randomEnable() {
         List<RuntimeTransition> enableTransitions = this.getEnableTransitions();
         return enableTransitions.get(random.nextInt(enableTransitions.size()));
-        // inputToken = transition.getRandomInputToken();
-        // this.firing(transition.getId(), inputToken);
     }
 
     public OutputToken firing(RuntimeTransition transition) {
