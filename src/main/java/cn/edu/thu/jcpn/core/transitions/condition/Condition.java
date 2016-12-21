@@ -48,7 +48,7 @@ public class Condition {
         partitions.forEach(placePartition -> combinedPredicates.putAll(predicateItems.remove(placePartition)));
         predicateItems.put(combinedPartition, combinedPredicates);
 
-        combinedPredicates.putIfAbsent(partition, new ArrayList<>()).add(predicate);
+        combinedPredicates.computeIfAbsent(partition.clone(), obj -> new ArrayList<>()).add(predicate);
     }
 
     /**

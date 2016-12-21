@@ -227,26 +227,18 @@ public class RuntimePlace {
 
     /**
      * move all the tokens from the newly queue to the test queue.
+     * TODO tested, newly, generate test pair.
      */
-    public void markTokensAsTested(List<IToken> tokens) {
-        tokens.forEach(this::markTokenAsTested);
-    }
-
     public void markTokensAsTested() {
-        this.newlyTokens.forEach(this::markTokensAsTested);
+        // Map<ITarget, List<IToken>> newlyTokens
+        List<IToken> removed = new ArrayList<>();
+        newlyTokens.values().forEach(removed::addAll);
+        newlyTokens.values().forEach(List::clear);
+        removed.forEach(this::addToTested);
     }
 
-    public void markTokensAsTested(ITarget target, List<IToken> tokens) {
-        tokens.forEach(this::markTokenAsTested);
-    }
-
-    /**
-     * TODO if not exist ?
-     * @param token
-     */
-    public void markTokenAsTested(IToken token) {
+    public void addToTested(IToken token) {
         ITarget target = token.getTarget();
-        newlyTokens.computeIfAbsent(target, obj -> new ArrayList<>()).remove(token);
         testedTokens.computeIfAbsent(target, obj -> new ArrayList<>()).add(token);
     }
 

@@ -73,7 +73,7 @@ public class RuntimeTransition {
     public void initCache() {
         cache = new HashMap<>();
         targets.forEach(target -> {
-            Map<PlacePartition, List<InputToken>> targetPartitions = cache.put(target, new HashMap<>());
+            Map<PlacePartition, List<InputToken>> targetPartitions = cache.computeIfAbsent(target, obj -> new HashMap<>());
             condition.getPlacePartition().forEach(partition -> targetPartitions.put(partition, new ArrayList<>()));
         });
     }

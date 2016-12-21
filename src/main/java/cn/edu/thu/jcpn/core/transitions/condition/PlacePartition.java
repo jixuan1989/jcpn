@@ -28,4 +28,27 @@ public class PlacePartition extends TreeSet<Integer> {
         first.stream().filter(second::contains).forEach(res::add);
         return res;
     }
+
+//    public PlacePartition clone() {
+//        PlacePartition partition = new PlacePartition();
+//        this.forEach(partition::add);
+//        return partition;
+//    }
+//
+//    @Override
+//    public boolean equals(Object otherPartition) {
+//        if (otherPartition instanceof PlacePartition) {
+//            return this.equals((PlacePartition) otherPartition);
+//        }
+//        return false;
+//    }
+//
+//    public boolean equals(PlacePartition otherPartition) {
+//        if (this.size() != otherPartition.size()) return false;
+//
+//        long size = this.size();
+//        long thisContainOhter = this.stream().filter(this::contains).count();
+//        long otherContainThis = this.stream().filter(otherPartition::contains).count();
+//        return size == thisContainOhter && size == otherContainThis;
+//    }
 }
