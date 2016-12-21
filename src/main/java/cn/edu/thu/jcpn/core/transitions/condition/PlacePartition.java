@@ -29,12 +29,12 @@ public class PlacePartition extends TreeSet<Integer> {
         return res;
     }
 
-//    public PlacePartition clone() {
-//        PlacePartition partition = new PlacePartition();
-//        this.forEach(partition::add);
-//        return partition;
-//    }
-//
+    public PlacePartition clone() {
+        PlacePartition partition = new PlacePartition();
+        this.forEach(partition::add);
+        return partition;
+    }
+
 //    @Override
 //    public boolean equals(Object otherPartition) {
 //        if (otherPartition instanceof PlacePartition) {
