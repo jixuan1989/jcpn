@@ -8,7 +8,6 @@ import cn.edu.thu.jcpn.core.runtime.GlobalClock;
 import cn.edu.thu.jcpn.core.runtime.tokens.*;
 import cn.edu.thu.jcpn.core.transitions.Transition;
 import cn.edu.thu.jcpn.core.transitions.condition.OutputToken;
-import cn.edu.thu.jcpn.core.transitions.condition.PlacePartition;
 import cn.edu.thu.jcpn.elements.token.MessageToken;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -64,25 +63,25 @@ public class SimpleDistributedDatabaseTest {
         transitionMap.put(2, transition2);
 
         transition1.addInPlace(place1).addInPlace(place2);
-        PlacePartition partition1 = new PlacePartition();
-        partition1.add(PID_1);
-        partition1.add(PID_2);
-        transition1.addCondition(partition1, inputToken -> {
-            IToken thread = inputToken.get(PID_1);
-            IToken message = inputToken.get(PID_2);
-            return thread.getOwner().equals(message.getOwner());
-        });
+//        PlacePartition partition1 = new PlacePartition();
+//        partition1.add(PID_1);
+//        partition1.add(PID_2);
+//        transition1.addCondition(partition1, inputToken -> {
+//            IToken thread = inputToken.get(PID_1);
+//            IToken message = inputToken.get(PID_2);
+//            return thread.getOwner().equals(message.getOwner());
+//        });
         transition1.addOutPlace(place1).addOutPlace(place3);
 
         transition2.addInPlace(place3).addInPlace(place4);
-        PlacePartition partition2 = new PlacePartition();
-        partition2.add(PID_3);
-        partition2.add(PID_4);
-        transition1.addCondition(partition2, inputToken -> {
-            IToken message = inputToken.get(PID_3);
-            IToken socket = inputToken.get(PID_4);
-            return message.getOwner().equals(socket.getOwner()) && message.getTarget().equals(socket.getOwner());
-        });
+//        PlacePartition partition2 = new PlacePartition();
+//        partition2.add(PID_3);
+//        partition2.add(PID_4);
+//        transition1.addCondition(partition2, inputToken -> {
+//            IToken message = inputToken.get(PID_3);
+//            IToken socket = inputToken.get(PID_4);
+//            return message.getOwner().equals(socket.getOwner()) && message.getTarget().equals(socket.getOwner());
+//        });
         transition2.addOutPlace(place4).addOutPlace(place2);
 
         owners = IntStream.rangeClosed(1, SERVER_NUMBER).

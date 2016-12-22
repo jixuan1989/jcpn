@@ -2,6 +2,7 @@ package cn.edu.thu.jcpn.core.transitions.runtime;
 
 import cn.edu.thu.jcpn.core.cpn.runtime.RuntimeFoldingCPN;
 import cn.edu.thu.jcpn.core.cpn.runtime.RuntimeIndividualCPN;
+import cn.edu.thu.jcpn.core.places.Place;
 import cn.edu.thu.jcpn.core.runtime.tokens.IOwner;
 import cn.edu.thu.jcpn.core.places.runtime.RuntimePlace;
 import cn.edu.thu.jcpn.core.runtime.GlobalClock;
@@ -53,29 +54,56 @@ public class RuntimeTransition {
      */
     private RuntimeFoldingCPN foldingCPN;
 
-    public RuntimeTransition(IOwner owner, Set<ITarget> targets, Transition transition, RuntimeFoldingCPN foldingCPN) {
+    public RuntimeTransition(IOwner owner, Set<ITarget> targets, Transition transition,
+                             Map<Integer, RuntimePlace> runtimePlaces, RuntimeFoldingCPN foldingCPN) {
+
+        this.id = transition.getId();
+        this.name = transition.getName();
         this.owner = owner;
         this.targets = new HashSet<>(targets);
 
-        id = transition.getId();
-        name = transition.getName();
+        initInPlaces(transition.getInPlaces(), runtimePlaces);
+        outPlaces = new HashMap<>();
+
         condition = transition.getCondition();
         outputFunction = transition.getOutputFunction();
 
         initCache();
         enableTargets = new ArrayList<>();
 
-        this.foldingCPN = foldingCPN;
-
         globalClock = GlobalClock.getInstance();
+
+        this.foldingCPN = foldingCPN;
     }
 
-    public void initCache() {
+    private void initInPlaces(Set<Place> places, Map<Integer, RuntimePlace> runtimePlaces) {
+        inPlaces = new HashMap<>();
+        places.forEach(place -> {
+            RuntimePlace inPlace = runtimePlaces.get(place.getId());
+            inPlaces.put(inPlace.getId(), inPlace);
+        });
+    }
+
+    private void initCache() {
         cache = new HashMap<>();
         targets.forEach(target -> {
             Map<PlacePartition, List<InputToken>> targetPartitions = cache.computeIfAbsent(target, obj -> new HashMap<>());
             condition.getPlacePartition().forEach(partition -> targetPartitions.put(partition, new ArrayList<>()));
+            PlacePartition freePartition = getFreePartition();
+            freePartition.forEach(pid -> {
+                PlacePartition partition = new PlacePartition();
+                partition.add(pid);
+                targetPartitions.put(partition, new ArrayList<>());
+            });
         });
+    }
+
+    private PlacePartition getFreePartition() {
+        PlacePartition conditionPartition = PlacePartition.combine(condition.getPlacePartition());
+        PlacePartition completePartition = PlacePartition.generate(inPlaces.values());
+        PlacePartition complementPartition = completePartition.subtract(conditionPartition);
+
+        return complementPartition;
     }
 
     public Integer getId() {
@@ -175,19 +203,31 @@ public class RuntimeTransition {
     private void findAndSave(ITarget target, PlacePartition partition, InputToken tokenSet, List<InputToken> availableTokens, int position) {
         List<Integer> pids = partition.getPids();
         if (position == pids.size()) {
-            if (condition.test(partition, tokenSet)) {
+            if (condition.test(partition, tokenSet) && containNew(target, partition, tokenSet)) {
                 availableTokens.add(new InputToken(tokenSet));
             }
             return;
         }
 
         RuntimePlace place = inPlaces.get(pids.get(position));
-        List<IToken> tokens = place.getNewlyTokens(target);
+        List<IToken> tokens = place.getCurrentTokens(target);
         for (int i = 0; i < tokens.size(); ++i) {
             tokenSet.addToken(pids.get(position), tokens.get(i));
             findAndSave(target, partition, tokenSet, availableTokens, position + 1);
             tokenSet.removeToken(pids.get(position));
         }
+    }
+
+    private boolean containNew(ITarget target, PlacePartition partition, InputToken inputToken) {
+        for (int pid : partition) {
+            List<IToken> tokens = inPlaces.get(pid).getNewlyTokens(target);
+            IToken token = inputToken.get(pid);
+            if (tokens.contains(token)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public boolean canFire() {
@@ -273,13 +313,11 @@ public class RuntimeTransition {
             IToken token = inputToken.getValue();
             ITarget target = token.getTarget();
 
-            //Map<ITarget, Map<PlacePartition, List<InputToken>>> cache
             Map<PlacePartition, List<InputToken>> partitions = cache.get(target);
             for (Entry<PlacePartition, List<InputToken>> partitionEntry : partitions.entrySet()) {
                 PlacePartition partition = partitionEntry.getKey();
                 if (!partition.contains(pid)) continue;
 
-                //HashMap<Integer, IToken>
                 List<InputToken> tokenSets = partitionEntry.getValue();
                 List<InputToken> removedTokenSets = tokenSets.stream().
                         filter(tokenSet -> tokenSet.containsValue(token)).collect(Collectors.toList());
@@ -288,26 +326,3 @@ public class RuntimeTransition {
         }
     }
 }
-
-/*
-    public InputToken fire() {
-        Map<PlacePartition, Integer> selectedTokens = new HashMap<>();
-        cache.forEach((placeSet, tokenSets) -> {
-            selectedTokens.put(placeSet, random.nextInt() % tokenSets.size());
-        });
-        return this.fire(selectedTokens);
-    }
-
-    public InputToken fire(Map<PlacePartition, Integer> selectedTokens) {
-        // random get a tokenSet from each partition, and merge into one tokenSet.
-        // return it and remove from cache including all tokens relative to tokenSet.
-        // then remove tokens of this tokenSet from these origin places.
-        List<InputToken> randomTokens = new ArrayList<>();
-        cache.forEach((placeSet, tokenSets) -> {
-            InputToken temp = tokenSets.get(selectedTokens.get(placeSet));
-            randomTokens.add(temp);
-            //TODO remove chosen tokens.
-        });
-        return InputToken.combine(randomTokens);
-    }
- */

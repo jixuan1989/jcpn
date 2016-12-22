@@ -1,9 +1,8 @@
 package cn.edu.thu.jcpn.core.transitions.condition;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
-import java.util.TreeSet;
+import cn.edu.thu.jcpn.core.places.runtime.RuntimePlace;
+
+import java.util.*;
 
 /**
  * placeSet is a group of places' ids.
@@ -13,26 +12,32 @@ import java.util.TreeSet;
  */
 public class PlacePartition extends TreeSet<Integer> {
 
-    public static PlacePartition combine(List<PlacePartition> partitions) {
-        PlacePartition res = new PlacePartition();
-        partitions.forEach(res::addAll);
-        return res;
-    }
-
     public List<Integer> getPids() {
         return new ArrayList<>(this);
-    }
-
-    public static PlacePartition intersect(Set<Integer> first, Set<Integer> second) {
-        PlacePartition res = new PlacePartition();
-        first.stream().filter(second::contains).forEach(res::add);
-        return res;
     }
 
     public PlacePartition clone() {
         PlacePartition partition = new PlacePartition();
         this.forEach(partition::add);
         return partition;
+    }
+
+    public PlacePartition subtract(PlacePartition subPartition) {
+        PlacePartition partition = this.clone();
+        partition.removeAll(subPartition);
+        return partition;
+    }
+
+    public static PlacePartition combine(Collection<PlacePartition> partitions) {
+        PlacePartition res = new PlacePartition();
+        partitions.forEach(res::addAll);
+        return res;
+    }
+
+    public static PlacePartition generate(Collection<RuntimePlace> places) {
+        PlacePartition res = new PlacePartition();
+        places.forEach(place -> res.add(place.getId()));
+        return res;
     }
 
 //    @Override

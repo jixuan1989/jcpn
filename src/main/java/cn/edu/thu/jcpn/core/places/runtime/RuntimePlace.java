@@ -103,6 +103,19 @@ public class RuntimePlace {
         }
     }
 
+    public List<IToken> getCurrentTokens(ITarget target) {
+        List<IToken> res = new ArrayList<>();
+        if (type == LOCAL) {
+            res.addAll(newlyTokens.get(LocalAsTarget.getInstance()));
+            res.addAll(testedTokens.get(LocalAsTarget.getInstance()));
+        }
+        else {
+            res.addAll(newlyTokens.get(target));
+            res.addAll(testedTokens.get(target));
+        }
+        return res;
+    }
+
     public void setNewlyTokens(Map<ITarget, List<IToken>> newlyTokens) {
         this.newlyTokens = newlyTokens;
     }

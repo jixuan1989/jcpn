@@ -109,9 +109,13 @@ public class Place {
     }
 
     public void setInitialTokens(Map<IOwner, Map<ITarget, List<IToken>>> initialTokens) {
-        initialTokens.forEach((owner, targetTokens) ->
-                targetTokens.forEach((target, tokens) ->
-                        tokens.forEach(this::addInitToken)));
+        initialTokens.values().forEach(targetTokens ->
+                targetTokens.values().forEach(this::addInitTokens));
+        initialTokens.clear();
+    }
+
+    public void addInitTokens(List<IToken> tokens) {
+        tokens.forEach(this::addInitToken);
     }
 
     /**
@@ -120,7 +124,7 @@ public class Place {
      * @param token
      * @return
      */
-    public Place addInitToken(IToken token) {
+    public void addInitToken(IToken token) {
         IOwner owner = token.getOwner();
         ITarget target = token.getTarget();
 
@@ -134,7 +138,6 @@ public class Place {
         // 3) add the token into the target's token list.
         initialTokens.computeIfAbsent(owner, obj -> new HashMap<>()).
                 computeIfAbsent(target, obj -> new ArrayList<>()).add(token);
-        return this;
     }
 
     public Map<ITarget, List<IToken>> getTokensByOwner(IOwner owner) {

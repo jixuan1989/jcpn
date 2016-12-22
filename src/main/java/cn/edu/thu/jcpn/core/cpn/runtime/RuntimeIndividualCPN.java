@@ -72,7 +72,7 @@ public class RuntimeIndividualCPN {
     }
 
     private void addRuntimeTransition(Set<ITarget> targets, Transition transition) {
-        transitions.put(transition.getId(), new RuntimeTransition(owner, targets, transition, foldingCPN));
+        transitions.put(transition.getId(), new RuntimeTransition(owner, targets, transition, places, foldingCPN));
     }
 
     /**
@@ -97,7 +97,7 @@ public class RuntimeIndividualCPN {
      * @param pid
      * @param tokens
      */
-    public void addLocalNPNewlyTokens(Integer pid, List<IToken> tokens) {
+    public void addLocalNewlyTokens(Integer pid, List<IToken> tokens) {
         RuntimePlace instance = places.get(pid);
         synchronized (instance) {
             instance.addTokens(tokens);
