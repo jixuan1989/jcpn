@@ -107,13 +107,13 @@ public class SimpleDistributedDatabaseTest {
 
                     MessageToken received = (MessageToken) inputToken.get(PID_2);
                     MessageToken toSend = new MessageToken(received.getMessage() + 1);
-                    toSend.setOwner((IOwner) received.getTarget());
-                    toSend.setTarget(received.getOwner());
-                    toSend.setTime(globalClock.getTime() + 1);
+                    toSend.setOwner(received.getOwner());
+                    toSend.setTarget(received.getTarget());
+                    //toSend.setTime(globalClock.getTime() + 1);
                     outputToken.addToken(toSend.getTarget(), PID_3, toSend);
 
                     IToken thread = inputToken.get(PID_1);
-                    thread.setTime(globalClock.getTime() + 1);
+                    //thread.setTime(globalClock.getTime() + 1);
                     outputToken.addToken(LocalAsTarget.getInstance(), PID_1, thread);
 
                     return outputToken;
@@ -126,13 +126,13 @@ public class SimpleDistributedDatabaseTest {
 
                     MessageToken toSend = (MessageToken) inputToken.get(PID_3);
                     MessageToken received = new MessageToken(toSend.getMessage() + 1);
-                    received.setOwner((IOwner) toSend.getTarget());
-                    received.setTarget(toSend.getOwner());
-                    received.setTime(globalClock.getTime() + 1);
+                    received.setOwner(toSend.getOwner());
+                    received.setTarget(toSend.getTarget());
+                    //received.setTime(globalClock.getTime() + 1);
                     outputToken.addToken(received.getTarget(), PID_2, received);
 
                     IToken socket = inputToken.get(PID_4);
-                    socket.setTime(globalClock.getTime() + 1);
+                    //socket.setTime(globalClock.getTime() + 1);
                     outputToken.addToken(LocalAsTarget.getInstance(), PID_4, socket);
 
                     return outputToken;
@@ -150,6 +150,8 @@ public class SimpleDistributedDatabaseTest {
         simulator.compile();
 
         while (simulator.hasNextTime()) {
+            globalClock.logStatus();
+            instance.logStatus();
             simulator.nextRound();
         }
     }

@@ -3,7 +3,7 @@ package cn.edu.thu.jcpn.core.runtime.tokens;
 /**
  * Created by leven on 2016/12/17.
  */
-public class LocalAsTarget implements ITarget {
+public class LocalAsTarget implements IOwner {
 
     @Override
     public String getName() {

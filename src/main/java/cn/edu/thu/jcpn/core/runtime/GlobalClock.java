@@ -104,4 +104,18 @@ public class GlobalClock {
         }
     }
 
+    public void logStatus() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("time: " + time + ", running owners: ");
+        timelineForRunning.forEach((time, owners) -> {
+            owners.forEach((owner, obj) -> sb.append(owner + "\t"));
+        });
+
+        sb.append("\ntime: " + time + ", sending owners: ");
+        timelineForSending.forEach((time, owners) -> {
+            owners.forEach((owner, obj) -> sb.append(owner + "\t"));
+        });
+        System.out.println(sb.toString());
+    }
+
 }

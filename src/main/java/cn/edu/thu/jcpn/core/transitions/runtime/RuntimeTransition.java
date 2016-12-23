@@ -32,9 +32,8 @@ public class RuntimeTransition {
 
     private int id;
     private String name;
-
     private IOwner owner;
-    private Set<ITarget> targets;
+    private int priority = 500;
 
     private Map<Integer, RuntimePlace> inPlaces;
     private Map<ITarget, Map<Integer, RuntimePlace>> outPlaces;
@@ -42,25 +41,21 @@ public class RuntimeTransition {
     private Condition condition;
     private Function<InputToken, OutputToken> outputFunction;
 
-    private Map<ITarget, Map<PlacePartition, List<InputToken>>> cache;
-    private List<ITarget> enableTargets;
+    private Map<PlacePartition, List<InputToken>> cache;
 
     private GlobalClock globalClock;
-
-    private static Random random = new Random();
 
     /**
      * Only use for fetch the places of tokens' targets.
      */
     private RuntimeFoldingCPN foldingCPN;
 
-    public RuntimeTransition(IOwner owner, Set<ITarget> targets, Transition transition,
-                             Map<Integer, RuntimePlace> runtimePlaces, RuntimeFoldingCPN foldingCPN) {
+    public RuntimeTransition(IOwner owner, Map<Integer, RuntimePlace> runtimePlaces,
+                             Transition transition, RuntimeFoldingCPN foldingCPN) {
 
         this.id = transition.getId();
         this.name = transition.getName();
         this.owner = owner;
-        this.targets = new HashSet<>(targets);
 
         initInPlaces(transition.getInPlaces(), runtimePlaces);
         outPlaces = new HashMap<>();
@@ -69,7 +64,6 @@ public class RuntimeTransition {
         outputFunction = transition.getOutputFunction();
 
         initCache();
-        enableTargets = new ArrayList<>();
 
         globalClock = GlobalClock.getInstance();
 
@@ -86,15 +80,12 @@ public class RuntimeTransition {
 
     private void initCache() {
         cache = new HashMap<>();
-        targets.forEach(target -> {
-            Map<PlacePartition, List<InputToken>> targetPartitions = cache.computeIfAbsent(target, obj -> new HashMap<>());
-            condition.getPlacePartition().forEach(partition -> targetPartitions.put(partition, new ArrayList<>()));
-            PlacePartition freePartition = getFreePartition();
-            freePartition.forEach(pid -> {
-                PlacePartition partition = new PlacePartition();
-                partition.add(pid);
-                targetPartitions.put(partition, new ArrayList<>());
-            });
+        condition.getPlacePartition().forEach(partition -> cache.put(partition, new ArrayList<>()));
+        PlacePartition freePartition = getFreePartition();
+        freePartition.forEach(pid -> {
+            PlacePartition partition = new PlacePartition();
+            partition.add(pid);
+            cache.put(partition, new ArrayList<>());
         });
     }
 
@@ -128,6 +119,14 @@ public class RuntimeTransition {
 
     public void setOwner(IOwner owner) {
         this.owner = owner;
+    }
+
+    public int getPriority() {
+        return priority;
+    }
+
+    public void setPriority(int priority) {
+        this.priority = priority;
     }
 
     public Condition getCondition() {
@@ -170,57 +169,42 @@ public class RuntimeTransition {
      * <br> (However, this method does not implement it, a CPNInstance class needs to control that)
      */
     public void checkNewlyTokens4Firing() {
-        // for each target, ask input places for tokens available for the target.
-        targets.forEach(this::checkNewlyTokens4Firing);
+        // for each partition, ask input places for tokens available for the target.
+        cache.keySet().forEach(this::checkNewlyTokens4Firing);
     }
 
-    /**
-     * For each input place, get the newly tokens which will be transmitted to the target place remotely.
-     * If the target place is locally, then getNewlyTokens action will get the newly tokens locally.
-     * <pre>
-     * It means there are two situations:
-     *      1) the transition is running locally, then it will fetch all newly tokens from the local places
-     *         whose the target type is LocalAsTarget(an only one instance from a static method of the class).
-     *      2) the transition is sending message, then it will fetch newly tokens from both local places
-     *         and communicating places. Here a target work for the communicating places, and you will get the
-     *         newly tokens to be sent to the target, meanwhile, you will get newly tokens from local places
-     *         with LocalAsTarget type.
-     * </pre>
-     *
-     * @param target
-     */
-    public void checkNewlyTokens4Firing(ITarget target) {
-        condition.getPlacePartition().forEach(partition -> {
-            List<InputToken> availableTokens = new ArrayList<>();
-            InputToken tokenSet = new InputToken();
-            findAndSave(target, partition, tokenSet, availableTokens, 0);
-            // Map<ITarget, Map<PlacePartition, List<InputToken>>> cache;
-            cache.computeIfAbsent(target, obj -> new HashMap<>()).
-                    computeIfAbsent(partition, obj -> new ArrayList<>()).addAll(availableTokens);
-        });
+    public void checkNewlyTokens4Firing(PlacePartition partition) {
+        List<InputToken> availableTokens = new ArrayList<>();
+        InputToken tokenSet = new InputToken();
+        findAndSave(partition, tokenSet, availableTokens, 0);
+        // Map<ITarget, Map<PlacePartition, List<InputToken>>> cache;
+        cache.get(partition).addAll(availableTokens);
     }
 
-    private void findAndSave(ITarget target, PlacePartition partition, InputToken tokenSet, List<InputToken> availableTokens, int position) {
+    private void findAndSave(PlacePartition partition, InputToken tokenSet, List<InputToken> availableTokens, int position) {
         List<Integer> pids = partition.getPids();
         if (position == pids.size()) {
-            if (condition.test(partition, tokenSet) && containNew(target, partition, tokenSet)) {
+            if (condition.test(partition, tokenSet) && containNew(partition, tokenSet)) {
                 availableTokens.add(new InputToken(tokenSet));
             }
             return;
         }
 
         RuntimePlace place = inPlaces.get(pids.get(position));
-        List<IToken> tokens = place.getCurrentTokens(target);
+        List<IToken> tokens = new ArrayList<>();
+        if (place.hasNewlyTokens()) tokens.addAll(place.getNewlyTokens());
+        tokens.addAll(place.getTestedTokens());
+
         for (int i = 0; i < tokens.size(); ++i) {
             tokenSet.addToken(pids.get(position), tokens.get(i));
-            findAndSave(target, partition, tokenSet, availableTokens, position + 1);
+            findAndSave(partition, tokenSet, availableTokens, position + 1);
             tokenSet.removeToken(pids.get(position));
         }
     }
 
-    private boolean containNew(ITarget target, PlacePartition partition, InputToken inputToken) {
+    private boolean containNew(PlacePartition partition, InputToken inputToken) {
         for (int pid : partition) {
-            List<IToken> tokens = inPlaces.get(pid).getNewlyTokens(target);
+            List<IToken> tokens = inPlaces.get(pid).getNewlyTokens();
             IToken token = inputToken.get(pid);
             if (tokens.contains(token)) {
                 return true;
@@ -231,25 +215,12 @@ public class RuntimeTransition {
     }
 
     public boolean canFire() {
-        enableTargets.clear();
-        cache.forEach((target, partitions) -> {
-            if (canFire(partitions)) {
-                enableTargets.add(target);
-            }
-        });
-        return !enableTargets.isEmpty();
-    }
-
-    private boolean canFire(Map<PlacePartition, List<InputToken>> partitions) {
-        return partitions.values().stream().noneMatch(List::isEmpty);
+        return cache.values().stream().noneMatch(List::isEmpty);
     }
 
     public InputToken getRandmonInputToken() {
-        ITarget target = enableTargets.get(random.nextInt(enableTargets.size()));
-        Map<PlacePartition, List<InputToken>> partitions = cache.get(target);
         InputToken inputToken = new InputToken();
-        partitions.values().forEach(inputTokens -> inputToken.merge(inputTokens.get(0)));
-
+        cache.values().forEach(partitionTokens -> inputToken.merge(partitionTokens.get(0)));
         return inputToken;
     }
 
@@ -259,7 +230,6 @@ public class RuntimeTransition {
      */
     public OutputToken firing(InputToken inputTokens) {
         if (outputFunction == null) return null;
-        removeTokenFromCache(inputTokens);
         OutputToken outputTokens = this.outputFunction.apply(inputTokens);
 
         for (Entry<ITarget, Map<Integer, List<IToken>>> targetPidTokens : outputTokens.entrySet()) {
@@ -286,15 +256,15 @@ public class RuntimeTransition {
 
     private RuntimePlace getOutPlace(ITarget target, int pid) {
         Map<Integer, RuntimePlace> targetPlaces = outPlaces.computeIfAbsent(target, obj -> new HashMap<>());
-        if (targetPlaces.isEmpty()) {
-            RuntimeIndividualCPN targetCPN = foldingCPN.getIndividualCPN((IOwner) target);
+        if (targetPlaces.isEmpty() || !targetPlaces.containsKey(pid)) {
+            RuntimeIndividualCPN targetCPN = foldingCPN.getIndividualCPN((IOwner) target, owner);
             RuntimePlace targetPlace = targetCPN.getPlace(pid);
             targetPlaces.put(pid, targetPlace);
         }
         return targetPlaces.get(pid);
     }
 
-    public Map<ITarget, Map<PlacePartition, List<InputToken>>> getAllAvailableTokens() {
+    public Map<PlacePartition, List<InputToken>> getAllAvailableTokens() {
         return cache;
     }
 
@@ -308,13 +278,10 @@ public class RuntimeTransition {
      */
     public void removeTokenFromCache(InputToken inputTokens) {
         for (Entry<Integer, IToken> inputToken : inputTokens.entrySet()) {
-
             int pid = inputToken.getKey();
             IToken token = inputToken.getValue();
-            ITarget target = token.getTarget();
 
-            Map<PlacePartition, List<InputToken>> partitions = cache.get(target);
-            for (Entry<PlacePartition, List<InputToken>> partitionEntry : partitions.entrySet()) {
+            for (Entry<PlacePartition, List<InputToken>> partitionEntry : cache.entrySet()) {
                 PlacePartition partition = partitionEntry.getKey();
                 if (!partition.contains(pid)) continue;
 

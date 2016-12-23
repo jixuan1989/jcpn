@@ -71,8 +71,8 @@ public class RuntimeIndividualCPN {
         places.put(place.getId(), new RuntimePlace(owner, place));
     }
 
-    private void addRuntimeTransition(Set<ITarget> targets, Transition transition) {
-        transitions.put(transition.getId(), new RuntimeTransition(owner, targets, transition, places, foldingCPN));
+    private void addRuntimeTransition(Transition transition) {
+        transitions.put(transition.getId(), new RuntimeTransition(owner, places, transition, foldingCPN));
     }
 
     /**
@@ -82,10 +82,10 @@ public class RuntimeIndividualCPN {
      * @param places      no matter whether places have global places, we do not copy the global places in them
      * @param transitions
      */
-    public void construct(Set<ITarget> targets, Collection<Place> places, Collection<Transition> transitions) {
+    public void construct(Collection<Place> places, Collection<Transition> transitions) {
         //copy all the places and transitions first.
         places.forEach(this::addRuntimePlace);
-        transitions.forEach(transition -> addRuntimeTransition(targets, transition));
+        transitions.forEach(this::addRuntimeTransition);
     }
 
     /**
@@ -146,6 +146,7 @@ public class RuntimeIndividualCPN {
     }
 
     public void logStatus() {
+        System.out.println("--------------------------------owner: " + owner + "----------------------------------");
         places.values().forEach(RuntimePlace::logStatus);
     }
 }

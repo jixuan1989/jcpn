@@ -4,20 +4,18 @@ import cn.edu.thu.jcpn.core.places.Place;
 import cn.edu.thu.jcpn.core.places.Place.*;
 import cn.edu.thu.jcpn.core.runtime.GlobalClock;
 import cn.edu.thu.jcpn.core.runtime.tokens.IOwner;
-import cn.edu.thu.jcpn.core.runtime.tokens.ITarget;
 import cn.edu.thu.jcpn.core.runtime.tokens.IToken;
-import cn.edu.thu.jcpn.core.runtime.tokens.LocalAsTarget;
 
 import java.util.*;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.stream.Collectors;
-
-import static cn.edu.thu.jcpn.core.places.Place.PlaceType.LOCAL;
 
 public class RuntimePlace {
 
-    protected IOwner owner;
     protected int id;
     protected String name;
+    protected IOwner owner;
+
     protected PlaceType type;
     protected PlaceStrategy placeStrategy;
 
@@ -28,9 +26,9 @@ public class RuntimePlace {
      * <br>And in this case, it does not have a LocalAsTarget entry.
      * <br>And the type of the place is COMMUNICATING.
      */
-    protected Map<ITarget, List<IToken>> newlyTokens;
-    protected Map<ITarget, List<IToken>> testedTokens;
-    protected Map<ITarget, List<IToken>> futureTokens;
+    protected List<IToken> newlyTokens;
+    protected List<IToken> testedTokens;
+    protected List<IToken> futureTokens;
 
     protected GlobalClock globalClock;
     protected static Random random = new Random();
@@ -42,9 +40,9 @@ public class RuntimePlace {
         this.type = place.getType();
         this.placeStrategy = place.getPlaceStrategy();
 
-        this.newlyTokens = new HashMap<>();
-        this.testedTokens = new HashMap<>();
-        this.futureTokens = new HashMap<>();
+        this.newlyTokens = new ArrayList<>();
+        this.testedTokens = new ArrayList<>();
+        this.futureTokens = new CopyOnWriteArrayList<>();
         this.globalClock = GlobalClock.getInstance();
 
         this.addTokens(place.getTokensByOwner(this.owner));
@@ -90,56 +88,28 @@ public class RuntimePlace {
         this.owner = owner;
     }
 
-    public Map<ITarget, List<IToken>> getNewlyTokens() {
+    public List<IToken> getNewlyTokens() {
         return newlyTokens;
     }
 
-    public List<IToken> getNewlyTokens(ITarget target) {
-        if (type == LOCAL) {
-            return newlyTokens.get(LocalAsTarget.getInstance());
-        }
-        else {
-            return newlyTokens.get(target);
-        }
-    }
-
-    public List<IToken> getCurrentTokens(ITarget target) {
-        List<IToken> res = new ArrayList<>();
-        if (type == LOCAL) {
-            res.addAll(newlyTokens.get(LocalAsTarget.getInstance()));
-            res.addAll(testedTokens.get(LocalAsTarget.getInstance()));
-        }
-        else {
-            res.addAll(newlyTokens.get(target));
-            res.addAll(testedTokens.get(target));
-        }
-        return res;
-    }
-
-    public void setNewlyTokens(Map<ITarget, List<IToken>> newlyTokens) {
+    public void setNewlyTokens(List<IToken> newlyTokens) {
         this.newlyTokens = newlyTokens;
     }
 
-    public Map<ITarget, List<IToken>> getTestedTokens() {
+    public List<IToken> getTestedTokens() {
         return testedTokens;
     }
 
-    public void setTestedTokens(Map<ITarget, List<IToken>> testedTokens) {
+    public void setTestedTokens(List<IToken> testedTokens) {
         this.testedTokens = testedTokens;
     }
 
-    public Map<ITarget, List<IToken>> getFutureTokens() {
+    public List<IToken> getFutureTokens() {
         return futureTokens;
     }
 
-    public void setFutureTokens(Map<ITarget, List<IToken>> futureTokens) {
+    public void setFutureTokens(List<IToken> futureTokens) {
         this.futureTokens = futureTokens;
-    }
-
-    public void addTokens(Map<ITarget, List<IToken>> targetTokens) {
-        if (null == targetTokens) return;
-
-        targetTokens.values().forEach(this::addTokens);
     }
 
     public void addTokens(List<IToken> tokens) {
@@ -151,35 +121,37 @@ public class RuntimePlace {
     public void addToken(IToken token) {
         if (null == token) return;
 
-        ITarget target = token.getTarget();
-        futureTokens.computeIfAbsent(target, obj -> new ArrayList<>());
-        newlyTokens.computeIfAbsent(target, obj -> new ArrayList<>());
+        // remote message.
+        if (token.getTarget().equals(owner)) {
+            token.setTarget(token.getOwner());
+            token.setOwner(owner);
+        }
 
         if (this.getPlaceStrategy().equals(PlaceStrategy.BAG)) {
-            addTokenBAG(target, token);
+            addTokenBAG(token);
         }
         else {
-            addTokenFIFO(target, token);
+            addTokenFIFO(token);
         }
     }
 
-    private void addTokenBAG(ITarget target, IToken token) {
+    private void addTokenBAG(IToken token) {
         if (token.getTime() > globalClock.getTime()) {
-            int position = random.nextInt(futureTokens.get(target).size() + 1);
-            futureTokens.get(target).add(position, token);
+            int position = random.nextInt(futureTokens.size() + 1);
+            futureTokens.add(position, token);
         }
         else {
-            int position = random.nextInt(newlyTokens.get(target).size() + 1);
-            newlyTokens.get(target).add(position, token);
+            int position = random.nextInt(newlyTokens.size() + 1);
+            newlyTokens.add(position, token);
         }
     }
 
-    private void addTokenFIFO(ITarget target, IToken token) {
+    private void addTokenFIFO(IToken token) {
         if (token.getTime() > globalClock.getTime()) {
-            addTokenByTimeOrder(futureTokens.get(target), token);
+            addTokenByTimeOrder(futureTokens, token);
         }
         else {
-            addTokenByTimeOrder(newlyTokens.get(target), token);
+            addTokenByTimeOrder(newlyTokens, token);
         }
     }
 
@@ -240,19 +212,10 @@ public class RuntimePlace {
 
     /**
      * move all the tokens from the newly queue to the test queue.
-     * TODO tested, newly, generate test pair.
      */
     public void markTokensAsTested() {
-        // Map<ITarget, List<IToken>> newlyTokens
-        List<IToken> removed = new ArrayList<>();
-        newlyTokens.values().forEach(removed::addAll);
-        newlyTokens.values().forEach(List::clear);
-        removed.forEach(this::addToTested);
-    }
-
-    public void addToTested(IToken token) {
-        ITarget target = token.getTarget();
-        testedTokens.computeIfAbsent(target, obj -> new ArrayList<>()).add(token);
+        testedTokens.addAll(newlyTokens);
+        newlyTokens.clear();
     }
 
     /**
@@ -262,52 +225,33 @@ public class RuntimePlace {
      *         false, otherwise.
      */
     public boolean hasNewlyTokens() {
-        futureTokens.forEach((target, tokens) -> {
-            // collect all the tokens time is earlier than current time.
-            List<IToken> timeUp = tokens.stream().filter(token -> token.getTime() <= GlobalClock.getInstance().getTime()).collect(Collectors.toList());
-            tokens.removeAll(timeUp);
-            newlyTokens.computeIfAbsent(target, obj -> new ArrayList<>()).addAll(timeUp);
-        });
+        List<IToken> timeUp = futureTokens.stream().
+                filter(token -> token.getTime() <= GlobalClock.getInstance().getTime()).collect(Collectors.toList());
+        futureTokens.removeAll(timeUp);
+        newlyTokens.addAll(timeUp);
 
-        for (List<IToken> targetNewlyTokens : newlyTokens.values()) {
-            if (!targetNewlyTokens.isEmpty()) {
-                return true;
-            }
-        }
-        return false;
+        return !newlyTokens.isEmpty();
     }
 
-    public void removeTokenFromTest(IToken token) {
-        removeTokenFromTest(token.getTarget(), token);
-    }
-
-    public void removeTokenFromTest(ITarget target, IToken token) {
-        testedTokens.getOrDefault(target, new ArrayList<>()).remove(token);
+    public boolean removeTokenFromTest(IToken token) {
+        return testedTokens.remove(token);
     }
 
     public void logStatus() {
         StringBuilder sb = new StringBuilder();
+        sb.append("\t\tNewly:");
         if (newlyTokens.size() > 0) {
-            newlyTokens.forEach((target, colorList) -> {
-                sb.append(String.format("\ttarget : %s\n", target));
-                colorList.forEach(color -> sb.append("\t" + color.toString() + " newly "));
-            });
+            newlyTokens.forEach(token -> sb.append("\t" + token.toString()));
         }
+        sb.append("\n\t\tTested:");
         if (testedTokens.size() > 0) {
-            sb.append("\n");
-            testedTokens.forEach((target, colorList) -> {
-                sb.append(String.format("\ttarget : %s\n", target));
-                colorList.forEach(color -> sb.append("\t" + color.toString() + " tested "));
-            });
+            testedTokens.forEach(token -> sb.append("\t" + token.toString()));
         }
+        sb.append("\n\t\tFuture:");
         if (futureTokens.size() > 0) {
-            sb.append("\n");
-            futureTokens.forEach((target, colorList) -> {
-                sb.append(String.format("\ttarget : %s\n", target));
-                colorList.forEach(color -> sb.append("\t" + color.toString() + " future "));
-            });
+            futureTokens.forEach(token -> sb.append("\t" + token.toString()));
         }
-        System.out.println(String.format("place : %s", getName()));
+        System.out.println(String.format("\t%d: %s", id, getName()));
         System.out.println(sb.toString());
     };
 }

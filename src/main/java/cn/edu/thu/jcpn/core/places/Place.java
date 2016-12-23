@@ -26,7 +26,7 @@ public class Place {
      * <br>If target is LocalAsTarget, it means the token is used locally.
      * <br>In this case, the map contains only one <target, tokens> item.
      */
-    private Map<IOwner, Map<ITarget, List<IToken>>> initialTokens;
+    private Map<IOwner, List<IToken>> initialTokens;
 
     /**
      * <br>BAG : random sort the tokens.
@@ -104,13 +104,12 @@ public class Place {
         this.type = type;
     }
 
-    public Map<IOwner, Map<ITarget, List<IToken>>> getInitialTokens() {
+    public Map<IOwner, List<IToken>> getInitialTokens() {
         return initialTokens;
     }
 
-    public void setInitialTokens(Map<IOwner, Map<ITarget, List<IToken>>> initialTokens) {
-        initialTokens.values().forEach(targetTokens ->
-                targetTokens.values().forEach(this::addInitTokens));
+    public void setInitialTokens(Map<IOwner, List<IToken>> initialTokens) {
+        initialTokens.values().forEach(this::addInitTokens);
         initialTokens.clear();
     }
 
@@ -134,13 +133,11 @@ public class Place {
             this.setType(COMMUNICATING);
 
         // 1) check whether the owner exists.
-        // 2) check the target for the owner exists.
-        // 3) add the token into the target's token list.
-        initialTokens.computeIfAbsent(owner, obj -> new HashMap<>()).
-                computeIfAbsent(target, obj -> new ArrayList<>()).add(token);
+        // 2) add the token into the owner's token list.
+        initialTokens.computeIfAbsent(owner, obj -> new ArrayList<>()).add(token);
     }
 
-    public Map<ITarget, List<IToken>> getTokensByOwner(IOwner owner) {
+    public List<IToken> getTokensByOwner(IOwner owner) {
         return initialTokens.get(owner);
     }
 }

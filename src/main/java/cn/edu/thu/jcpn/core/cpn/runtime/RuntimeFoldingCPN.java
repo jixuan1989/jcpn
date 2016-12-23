@@ -3,7 +3,7 @@ package cn.edu.thu.jcpn.core.cpn.runtime;
 import cn.edu.thu.jcpn.core.cpn.CPN;
 import cn.edu.thu.jcpn.core.places.Place;
 import cn.edu.thu.jcpn.core.runtime.tokens.IOwner;
-import cn.edu.thu.jcpn.core.runtime.tokens.ITarget;
+import cn.edu.thu.jcpn.core.runtime.tokens.LocalAsTarget;
 import cn.edu.thu.jcpn.core.transitions.Transition;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -38,13 +38,10 @@ public class RuntimeFoldingCPN {
         Collection<Place> places = graph.getPlaces().values();
         Collection<Transition> transitions = graph.getTransitions().values();
 
-        Set<ITarget> targets = new HashSet<>(owners);
         for (IOwner owner : owners) {
-            targets.remove(owner);
             RuntimeIndividualCPN individualCPN = new RuntimeIndividualCPN(owner, this);
-            individualCPN.construct(targets, places, transitions);
+            individualCPN.construct(places, transitions);
             individualCPNs.put(owner, individualCPN);
-            targets.add(owner);
         }
 
         compiled = true;
@@ -59,11 +56,12 @@ public class RuntimeFoldingCPN {
         return compiled;
     }
 
-    public RuntimeIndividualCPN getIndividualCPN(IOwner owner) {
-        return individualCPNs.get(owner);
+    public RuntimeIndividualCPN getIndividualCPN(IOwner owner, IOwner from) {
+        IOwner realOwner = (owner instanceof LocalAsTarget) ? from : owner;
+        return individualCPNs.get(realOwner);
     }
 
     public void logStatus() {
-        ;
+        individualCPNs.values().forEach(RuntimeIndividualCPN::logStatus);
     }
 }
