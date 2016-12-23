@@ -2,6 +2,7 @@ package cn.edu.thu.jcpn.runtime;
 
 import cn.edu.thu.jcpn.core.cpn.CPN;
 import cn.edu.thu.jcpn.core.cpn.runtime.RuntimeFoldingCPN;
+import cn.edu.thu.jcpn.core.cpn.runtime.RuntimeIndividualCPN;
 import cn.edu.thu.jcpn.core.places.Place;
 import cn.edu.thu.jcpn.core.runtime.AutoSimulator;
 import cn.edu.thu.jcpn.core.runtime.GlobalClock;
@@ -63,25 +64,9 @@ public class SimpleDistributedDatabaseTest {
         transitionMap.put(2, transition2);
 
         transition1.addInPlace(place1).addInPlace(place2);
-//        PlacePartition partition1 = new PlacePartition();
-//        partition1.add(PID_1);
-//        partition1.add(PID_2);
-//        transition1.addCondition(partition1, inputToken -> {
-//            IToken thread = inputToken.get(PID_1);
-//            IToken message = inputToken.get(PID_2);
-//            return thread.getOwner().equals(message.getOwner());
-//        });
         transition1.addOutPlace(place1).addOutPlace(place3);
 
         transition2.addInPlace(place3).addInPlace(place4);
-//        PlacePartition partition2 = new PlacePartition();
-//        partition2.add(PID_3);
-//        partition2.add(PID_4);
-//        transition1.addCondition(partition2, inputToken -> {
-//            IToken message = inputToken.get(PID_3);
-//            IToken socket = inputToken.get(PID_4);
-//            return message.getOwner().equals(socket.getOwner()) && message.getTarget().equals(socket.getOwner());
-//        });
         transition2.addOutPlace(place4).addOutPlace(place2);
 
         owners = IntStream.rangeClosed(1, SERVER_NUMBER).
@@ -90,15 +75,13 @@ public class SimpleDistributedDatabaseTest {
         //p1中保存每个服务器的一个token,用unitToken表示
         owners.forEach(owner -> place1.addInitToken(new UnitToken(owner, LocalAsTarget.getInstance())));
 
-        IToken token = new MessageToken(0);
-        token.setOwner(owners.get(0));
-        token.setTarget(owners.get(1));
-        place3.addInitToken(token);
-
         //p3中保存消息
         //p4中保存每个服务器和别的服务器的套接字token,也用unitColor表示
         owners.forEach(innerOwner -> owners.stream().filter(innerTarget -> !innerTarget.equals(innerOwner)).
-                forEach(innerTarget -> place4.addInitToken(new UnitToken(innerOwner, innerTarget))));
+                forEach(innerTarget -> {
+                    place3.addInitToken(new MessageToken(innerOwner, innerTarget, 0));
+                    place4.addInitToken(new UnitToken(innerOwner, innerTarget));
+                }));
 
         //t1,t2写output函数
         transition1.setOutputFunction(
@@ -109,11 +92,11 @@ public class SimpleDistributedDatabaseTest {
                     MessageToken toSend = new MessageToken(received.getMessage() + 1);
                     toSend.setOwner(received.getOwner());
                     toSend.setTarget(received.getTarget());
-                    //toSend.setTime(globalClock.getTime() + 1);
+                    toSend.setTime(globalClock.getTime() + 1);
                     outputToken.addToken(toSend.getTarget(), PID_3, toSend);
 
                     IToken thread = inputToken.get(PID_1);
-                    //thread.setTime(globalClock.getTime() + 1);
+                    thread.setTime(globalClock.getTime() + 1);
                     outputToken.addToken(LocalAsTarget.getInstance(), PID_1, thread);
 
                     return outputToken;
@@ -128,11 +111,11 @@ public class SimpleDistributedDatabaseTest {
                     MessageToken received = new MessageToken(toSend.getMessage() + 1);
                     received.setOwner(toSend.getOwner());
                     received.setTarget(toSend.getTarget());
-                    //received.setTime(globalClock.getTime() + 1);
+                    received.setTime(globalClock.getTime() + 1);
                     outputToken.addToken(received.getTarget(), PID_2, received);
 
                     IToken socket = inputToken.get(PID_4);
-                    //socket.setTime(globalClock.getTime() + 1);
+                    socket.setTime(globalClock.getTime() + 1);
                     outputToken.addToken(LocalAsTarget.getInstance(), PID_4, socket);
 
                     return outputToken;
@@ -149,10 +132,22 @@ public class SimpleDistributedDatabaseTest {
         AutoSimulator simulator = new AutoSimulator(instance);
         simulator.compile();
 
+        int count = 0;
         while (simulator.hasNextTime()) {
             globalClock.logStatus();
-            instance.logStatus();
             simulator.nextRound();
+
+//            if (count == 5) {
+//                IOwner owner = owners.get(0);
+//                ITarget target = owners.get(1);
+//                IToken token = new MessageToken(owner, target, 1000);
+//                List<IToken> tokens = new ArrayList<>();
+//                tokens.add(token);
+//                RuntimeIndividualCPN instanceIndividualCPN = instance.getIndividualCPN(owner, null);
+//                instanceIndividualCPN.addNewlyTokens(3, tokens);
+//            }
+
+            if (count++ == 66) break;
         }
     }
 }

@@ -102,7 +102,7 @@ public class RuntimeIndividualCPN {
      * @param pid
      * @param tokens
      */
-    public void addLocalNewlyTokens(Integer pid, List<IToken> tokens) {
+    public void addNewlyTokens(Integer pid, List<IToken> tokens) {
         RuntimePlace instance = places.get(pid);
         synchronized (instance) {
             instance.addTokens(tokens);
@@ -128,6 +128,7 @@ public class RuntimeIndividualCPN {
         return priorityTransitions.size() > 0;
     }
 
+    //TODO order by desc or asc?
     private Map<Integer, List<RuntimeTransition>> getEnableTransitions() {
         return this.transitions.values().stream().
                 filter(RuntimeTransition::canFire).collect(groupingBy(RuntimeTransition::getPriority));

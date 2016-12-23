@@ -12,6 +12,15 @@ public abstract class IToken {
 
     protected long time;
 
+    protected IToken() {
+
+    }
+
+    protected IToken(IOwner owner, ITarget target) {
+        this.owner = owner;
+        this.target = target;
+    }
+
     public IOwner getOwner() {
         return owner;
     }

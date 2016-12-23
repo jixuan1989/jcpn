@@ -42,7 +42,7 @@ public class GlobalClock {
     ConcurrentSkipListMap<Long, Map<IOwner, Object>> timelineForSending = new ConcurrentSkipListMap<>();
 
     public void addAbsoluteTimepointForRunning(IOwner owner, long absolutiveTime) {
-        timelineForRunning.computeIfAbsent(absolutiveTime, obj -> new ConcurrentHashMap<>()).put(owner, owner);
+        timelineForRunning.computeIfAbsent(absolutiveTime, obj -> new ConcurrentHashMap<>()).putIfAbsent(owner, owner);
     }
 
     /**
@@ -52,7 +52,7 @@ public class GlobalClock {
      * @param absolutiveTime
      */
     public void addAbsoluteTimepointForSending(IOwner owner, long absolutiveTime) {
-        timelineForSending.computeIfAbsent(absolutiveTime, obj -> new ConcurrentHashMap<>()).put(owner, owner);
+        timelineForSending.computeIfAbsent(absolutiveTime, obj -> new ConcurrentHashMap<>()).putIfAbsent(owner, owner);
     }
 
     public boolean hasNextRunningTime() {
@@ -79,11 +79,11 @@ public class GlobalClock {
             logger.debug(() -> String.format("check which event (sending or running) is earlier, sending: %d, running: %d", nextSendTime, nextRunTime));
             if (nextRunTime < nextSendTime) {
                 time = nextRunTime;
-                return new Pair<>(SENDING, timelineForRunning.pollFirstEntry());
+                return new Pair<>(RUNNING, timelineForRunning.pollFirstEntry());
             }
             else {
                 time = nextSendTime;
-                return new Pair<>(RUNNING, timelineForSending.pollFirstEntry());
+                return new Pair<>(SENDING, timelineForSending.pollFirstEntry());
             }
         }
         else if (this.hasNextSendingTime()) {
@@ -106,14 +106,16 @@ public class GlobalClock {
 
     public void logStatus() {
         StringBuilder sb = new StringBuilder();
-        sb.append("time: " + time + ", running owners: ");
         timelineForRunning.forEach((time, owners) -> {
+            sb.append("time: " + time + ", running owners: ");
             owners.forEach((owner, obj) -> sb.append(owner + "\t"));
+            sb.append("\n");
         });
 
-        sb.append("\ntime: " + time + ", sending owners: ");
         timelineForSending.forEach((time, owners) -> {
+            sb.append("time: " + time + ", sending owners: ");
             owners.forEach((owner, obj) -> sb.append(owner + "\t"));
+            sb.append("\n");
         });
         System.out.println(sb.toString());
     }

@@ -48,11 +48,15 @@ public class AutoSimulator extends Simulator {
         Entry<Long, Map<IOwner, Object>> timeOwner = nextEventTimeOwner.getRight();
         if (eventType.equals(SENDING)) {
             logger.trace(() -> "will get next sending event..." + timeOwner);
+            System.out.println("run sending events:");
             timeOwner.getValue().keySet().parallelStream().forEach(owner -> runACPNInstance(foldingCPN.getIndividualCPN(owner, null)));
         } else {
             logger.trace(() -> "will get next running event..." + timeOwner);
+            System.out.println("run running events:");
             timeOwner.getValue().keySet().parallelStream().forEach(owner -> runACPNInstance(foldingCPN.getIndividualCPN(owner, null)));
         }
+
+        foldingCPN.logStatus();
         return true;
     }
 
