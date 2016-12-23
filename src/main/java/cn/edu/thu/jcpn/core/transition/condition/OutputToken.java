@@ -1,4 +1,4 @@
-package cn.edu.thu.jcpn.core.transitions.condition;
+package cn.edu.thu.jcpn.core.transition.condition;
 
 import cn.edu.thu.jcpn.core.runtime.tokens.ITarget;
 import cn.edu.thu.jcpn.core.runtime.tokens.IToken;

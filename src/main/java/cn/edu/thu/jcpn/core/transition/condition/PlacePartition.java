@@ -1,12 +1,12 @@
-package cn.edu.thu.jcpn.core.transitions.condition;
+package cn.edu.thu.jcpn.core.transition.condition;
 
-import cn.edu.thu.jcpn.core.places.runtime.RuntimePlace;
+import cn.edu.thu.jcpn.core.place.runtime.RuntimePlace;
 
 import java.util.*;
 
 /**
- * placeSet is a group of places' ids.
- * e.g., a group of input places, a group of output places.
+ * placeSet is a group of place' ids.
+ * e.g., a group of input place, a group of output place.
  *
  * Created by leven on 2016/12/7.
  */

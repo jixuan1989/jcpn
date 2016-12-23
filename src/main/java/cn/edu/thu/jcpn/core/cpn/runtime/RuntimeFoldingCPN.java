@@ -1,10 +1,10 @@
 package cn.edu.thu.jcpn.core.cpn.runtime;
 
 import cn.edu.thu.jcpn.core.cpn.CPN;
-import cn.edu.thu.jcpn.core.places.Place;
+import cn.edu.thu.jcpn.core.place.Place;
 import cn.edu.thu.jcpn.core.runtime.tokens.IOwner;
 import cn.edu.thu.jcpn.core.runtime.tokens.LocalAsTarget;
-import cn.edu.thu.jcpn.core.transitions.Transition;
+import cn.edu.thu.jcpn.core.transition.Transition;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 

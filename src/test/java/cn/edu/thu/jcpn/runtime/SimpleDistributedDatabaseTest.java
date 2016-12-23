@@ -2,13 +2,12 @@ package cn.edu.thu.jcpn.runtime;
 
 import cn.edu.thu.jcpn.core.cpn.CPN;
 import cn.edu.thu.jcpn.core.cpn.runtime.RuntimeFoldingCPN;
-import cn.edu.thu.jcpn.core.cpn.runtime.RuntimeIndividualCPN;
-import cn.edu.thu.jcpn.core.places.Place;
+import cn.edu.thu.jcpn.core.place.Place;
 import cn.edu.thu.jcpn.core.runtime.AutoSimulator;
 import cn.edu.thu.jcpn.core.runtime.GlobalClock;
 import cn.edu.thu.jcpn.core.runtime.tokens.*;
-import cn.edu.thu.jcpn.core.transitions.Transition;
-import cn.edu.thu.jcpn.core.transitions.condition.OutputToken;
+import cn.edu.thu.jcpn.core.transition.Transition;
+import cn.edu.thu.jcpn.core.transition.condition.OutputToken;
 import cn.edu.thu.jcpn.elements.token.MessageToken;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;

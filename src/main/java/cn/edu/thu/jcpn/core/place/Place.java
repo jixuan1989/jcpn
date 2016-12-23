@@ -1,4 +1,4 @@
-package cn.edu.thu.jcpn.core.places;
+package cn.edu.thu.jcpn.core.place;
 
 import cn.edu.thu.jcpn.core.runtime.tokens.IOwner;
 import cn.edu.thu.jcpn.core.runtime.tokens.ITarget;
@@ -10,8 +10,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static cn.edu.thu.jcpn.core.places.Place.PlaceStrategy.*;
-import static cn.edu.thu.jcpn.core.places.Place.PlaceType.*;
+import static cn.edu.thu.jcpn.core.place.Place.PlaceStrategy.*;
+import static cn.edu.thu.jcpn.core.place.Place.PlaceType.*;
 
 public class Place {
 
@@ -37,8 +37,8 @@ public class Place {
     }
 
     /**
-     * <br>LOCAL : a place is local if it point to a local transitions.
-     * <br>COMMUNICATING: a place is communicating if it point to a transmit transitions.
+     * <br>LOCAL : a place is local if it point to a local transition.
+     * <br>COMMUNICATING: a place is communicating if it point to a transmit transition.
      */
     public enum PlaceType {
         LOCAL, COMMUNICATING

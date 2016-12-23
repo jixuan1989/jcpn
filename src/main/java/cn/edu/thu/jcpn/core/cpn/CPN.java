@@ -1,7 +1,7 @@
 package cn.edu.thu.jcpn.core.cpn;
 
-import cn.edu.thu.jcpn.core.places.Place;
-import cn.edu.thu.jcpn.core.transitions.Transition;
+import cn.edu.thu.jcpn.core.place.Place;
+import cn.edu.thu.jcpn.core.transition.Transition;
 
 import java.util.HashMap;
 import java.util.Map;

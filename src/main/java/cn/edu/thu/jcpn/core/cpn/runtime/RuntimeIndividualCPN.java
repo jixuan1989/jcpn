@@ -1,21 +1,18 @@
 package cn.edu.thu.jcpn.core.cpn.runtime;
 
-import cn.edu.thu.jcpn.core.places.Place;
-import cn.edu.thu.jcpn.core.places.runtime.*;
-import cn.edu.thu.jcpn.core.runtime.GlobalClock;
+import cn.edu.thu.jcpn.core.place.Place;
+import cn.edu.thu.jcpn.core.place.runtime.*;
 import cn.edu.thu.jcpn.core.runtime.tokens.IOwner;
-import cn.edu.thu.jcpn.core.runtime.tokens.ITarget;
 import cn.edu.thu.jcpn.core.runtime.tokens.IToken;
-import cn.edu.thu.jcpn.core.transitions.Transition;
-import cn.edu.thu.jcpn.core.transitions.condition.InputToken;
-import cn.edu.thu.jcpn.core.transitions.condition.OutputToken;
-import cn.edu.thu.jcpn.core.transitions.runtime.RuntimeTransition;
+import cn.edu.thu.jcpn.core.transition.Transition;
+import cn.edu.thu.jcpn.core.transition.condition.InputToken;
+import cn.edu.thu.jcpn.core.transition.condition.OutputToken;
+import cn.edu.thu.jcpn.core.transition.runtime.RuntimeTransition;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 import static java.util.stream.Collectors.groupingBy;
 
@@ -30,7 +27,7 @@ public class RuntimeIndividualCPN {
     private Map<Integer, RuntimeTransition> transitions;
 
     /**
-     * enable transitions order by priority.
+     * enable transition order by priority.
      */
     private Map<Integer, List<RuntimeTransition>> priorityTransitions;
 
@@ -81,14 +78,14 @@ public class RuntimeIndividualCPN {
     }
 
     /**
-     * copy places and transitions into this cpn instance.  Initial tokens are not included.
-     * <br> Though global places have been included in places, we extract them into this instance again
+     * copy place and transition into this cpn instance.  Initial tokens are not included.
+     * <br> Though global place have been included in place, we extract them into this instance again
      *
-     * @param places      no matter whether places have global places, we do not copy the global places in them
+     * @param places      no matter whether place have global place, we do not copy the global place in them
      * @param transitions
      */
     public void construct(Collection<Place> places, Collection<Transition> transitions) {
-        //copy all the places and transitions first.
+        //copy all the place and transition first.
         places.forEach(this::addRuntimePlace);
         transitions.forEach(this::addRuntimeTransition);
     }
@@ -96,7 +93,7 @@ public class RuntimeIndividualCPN {
     /**
      * this is thread safe.
      * <br>
-     * only used for individual and global places
+     * only used for individual and global place
      * <br> this method do not register any events on the timeline.
      *
      * @param pid
@@ -110,7 +107,7 @@ public class RuntimeIndividualCPN {
     }
 
     /**
-     * process all the newly tokens and update transitions' cached, then mark these tokens as tested.
+     * process all the newly tokens and update transition' cached, then mark these tokens as tested.
      * this method is idempotent
      */
     public void notifyTransitions() {
@@ -119,7 +116,7 @@ public class RuntimeIndividualCPN {
     }
 
     /**
-     * check which transitions can be fired
+     * check which transition can be fired
      *
      * @return
      */
@@ -163,7 +160,7 @@ public class RuntimeIndividualCPN {
 
     @Override
     public String toString() {
-        return "ICPN [owner=" + owner + ", places=" + places + ", transitions=" + transitions + "]";
+        return "ICPN [owner=" + owner + ", place=" + places + ", transition=" + transitions + "]";
     }
 
     public void logStatus() {

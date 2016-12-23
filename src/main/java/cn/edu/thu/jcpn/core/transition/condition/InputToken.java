@@ -1,4 +1,4 @@
-package cn.edu.thu.jcpn.core.transitions.condition;
+package cn.edu.thu.jcpn.core.transition.condition;
 
 import cn.edu.thu.jcpn.core.runtime.tokens.IToken;
 
@@ -6,7 +6,7 @@ import java.util.HashMap;
 
 
 /**
- * InputToken is made up by tokens which are extract from the places of this individual server.
+ * InputToken is made up by tokens which are extract from the place of this individual server.
  * So
  * Created by leven on 2016/12/7.
  */

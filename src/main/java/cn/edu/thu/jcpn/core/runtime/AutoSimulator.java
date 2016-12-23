@@ -5,7 +5,7 @@ import cn.edu.thu.jcpn.core.cpn.runtime.RuntimeFoldingCPN;
 import cn.edu.thu.jcpn.core.cpn.runtime.RuntimeIndividualCPN;
 import cn.edu.thu.jcpn.core.runtime.GlobalClock.EventType;
 import cn.edu.thu.jcpn.core.runtime.tokens.IOwner;
-import cn.edu.thu.jcpn.core.transitions.runtime.RuntimeTransition;
+import cn.edu.thu.jcpn.core.transition.runtime.RuntimeTransition;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 

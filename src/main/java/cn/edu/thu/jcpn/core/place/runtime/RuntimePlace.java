@@ -1,7 +1,7 @@
-package cn.edu.thu.jcpn.core.places.runtime;
+package cn.edu.thu.jcpn.core.place.runtime;
 
-import cn.edu.thu.jcpn.core.places.Place;
-import cn.edu.thu.jcpn.core.places.Place.*;
+import cn.edu.thu.jcpn.core.place.Place;
+import cn.edu.thu.jcpn.core.place.Place.*;
 import cn.edu.thu.jcpn.core.runtime.GlobalClock;
 import cn.edu.thu.jcpn.core.runtime.tokens.IOwner;
 import cn.edu.thu.jcpn.core.runtime.tokens.IToken;

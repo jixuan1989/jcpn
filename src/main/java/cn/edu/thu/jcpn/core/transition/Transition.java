@@ -1,10 +1,10 @@
-package cn.edu.thu.jcpn.core.transitions;
+package cn.edu.thu.jcpn.core.transition;
 
-import cn.edu.thu.jcpn.core.places.Place;
-import cn.edu.thu.jcpn.core.transitions.condition.Condition;
-import cn.edu.thu.jcpn.core.transitions.condition.InputToken;
-import cn.edu.thu.jcpn.core.transitions.condition.OutputToken;
-import cn.edu.thu.jcpn.core.transitions.condition.PlacePartition;
+import cn.edu.thu.jcpn.core.place.Place;
+import cn.edu.thu.jcpn.core.transition.condition.Condition;
+import cn.edu.thu.jcpn.core.transition.condition.InputToken;
+import cn.edu.thu.jcpn.core.transition.condition.OutputToken;
+import cn.edu.thu.jcpn.core.transition.condition.PlacePartition;
 
 import java.util.*;
 import java.util.function.Function;

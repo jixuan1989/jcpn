@@ -1,4 +1,4 @@
-package cn.edu.thu.jcpn.core.transitions.condition;
+package cn.edu.thu.jcpn.core.transition.condition;
 
 import java.util.*;
 import java.util.Map.Entry;
@@ -8,7 +8,7 @@ import java.util.function.Predicate;
  * 1. partition predicates into several exclusive sets. i.e. combination of the placeSets.
  * 2. cache the partition predicates test result.
  * 3. once newly tokens of a place come in, update the specific cache.
- * 4. once fire a token, remove the token from all the caches and other transitions caches.
+ * 4. once fire a token, remove the token from all the caches and other transition caches.
  * <p>
  * Created by leven on 2016/12/7.
  */

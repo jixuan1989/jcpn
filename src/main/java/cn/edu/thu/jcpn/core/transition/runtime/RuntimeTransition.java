@@ -1,19 +1,19 @@
-package cn.edu.thu.jcpn.core.transitions.runtime;
+package cn.edu.thu.jcpn.core.transition.runtime;
 
 import cn.edu.thu.jcpn.core.cpn.runtime.RuntimeFoldingCPN;
 import cn.edu.thu.jcpn.core.cpn.runtime.RuntimeIndividualCPN;
-import cn.edu.thu.jcpn.core.places.Place;
+import cn.edu.thu.jcpn.core.place.Place;
 import cn.edu.thu.jcpn.core.runtime.tokens.IOwner;
-import cn.edu.thu.jcpn.core.places.runtime.RuntimePlace;
+import cn.edu.thu.jcpn.core.place.runtime.RuntimePlace;
 import cn.edu.thu.jcpn.core.runtime.GlobalClock;
 import cn.edu.thu.jcpn.core.runtime.tokens.ITarget;
 import cn.edu.thu.jcpn.core.runtime.tokens.IToken;
 import cn.edu.thu.jcpn.core.runtime.tokens.LocalAsTarget;
-import cn.edu.thu.jcpn.core.transitions.Transition;
-import cn.edu.thu.jcpn.core.transitions.condition.Condition;
-import cn.edu.thu.jcpn.core.transitions.condition.InputToken;
-import cn.edu.thu.jcpn.core.transitions.condition.OutputToken;
-import cn.edu.thu.jcpn.core.transitions.condition.PlacePartition;
+import cn.edu.thu.jcpn.core.transition.Transition;
+import cn.edu.thu.jcpn.core.transition.condition.Condition;
+import cn.edu.thu.jcpn.core.transition.condition.InputToken;
+import cn.edu.thu.jcpn.core.transition.condition.OutputToken;
+import cn.edu.thu.jcpn.core.transition.condition.PlacePartition;
 
 import java.util.*;
 import java.util.Map.Entry;
@@ -22,11 +22,11 @@ import java.util.stream.Collectors;
 
 /**
  * Transition is the minimum unit to execute an event. Firstly, the individualCPN calls the
- * hasEnableTransitions method of its transitions to get the transitions who can execute. Then the CPN random
+ * hasEnableTransitions method of its transition to get the transition who can execute. Then the CPN random
  * pick one transition to prepare to execute through call the specific transition's getRandmonInputToken
  * and get the inputToken from the transition' cache. Then, use the inputToken the make the transition
- * firing. After that, use the inputToken to clean the relative tokens in all relative transitions' caches,
- * and the original places.
+ * firing. After that, use the inputToken to clean the relative tokens in all relative transition' caches,
+ * and the original place.
  */
 public class RuntimeTransition {
 
@@ -46,7 +46,7 @@ public class RuntimeTransition {
     private GlobalClock globalClock;
 
     /**
-     * Only use for fetch the places of tokens' targets.
+     * Only use for fetch the place of tokens' targets.
      */
     private RuntimeFoldingCPN foldingCPN;
 
@@ -162,14 +162,14 @@ public class RuntimeTransition {
     }
 
     /**
-     * when new tokens enter its input places, which related to the transitions, this method needs to be called.
-     * <br> the method will update its(transitions's) cachedBinding
+     * when new tokens enter its input place, which related to the transition, this method needs to be called.
+     * <br> the method will update its(transition's) cachedBinding
      * <br> NOTICE: this class is not idempotent. That is to say, it assumes after checkNewlyTokens4Firing,
      * <br> all the newly tokens are moved into tested.
      * <br> (However, this method does not implement it, a CPNInstance class needs to control that)
      */
     public void checkNewlyTokens4Firing() {
-        // for each partition, ask input places for tokens available for the target.
+        // for each partition, ask input place for tokens available for the target.
         cache.keySet().forEach(this::checkNewlyTokens4Firing);
     }
 

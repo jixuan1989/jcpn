@@ -1,7 +1,7 @@
 //package cn.edu.thu.jcpn.core.transitions.condition;
 //
-//import cn.edu.thu.jcpn.core.places.runtime.RuntimeLocalPlace;
-//import cn.edu.thu.jcpn.core.places.runtime.RuntimePlace;
+//import cn.edu.thu.jcpn.core.place.runtime.RuntimeLocalPlace;
+//import cn.edu.thu.jcpn.core.place.runtime.RuntimePlace;
 //import cn.edu.thu.jcpn.core.runtime.tokens.IToken;
 //
 //import java.util.*;
@@ -75,7 +75,7 @@
 //    public InputToken fire(Map<PlacePartition, Integer> selectedTokens) {
 //        // random get a tokenSet from each partition, and merge into one tokenSet.
 //        // return it and remove from cache including all tokens relative to tokenSet.
-//        // then remove tokens of this tokenSet from these origin places.
+//        // then remove tokens of this tokenSet from these origin place.
 //        List<InputToken> randomTokens = new ArrayList<>();
 //        cache.forEach((partition, tokenSets) -> {
 //            InputToken temp = tokenSets.get(selectedTokens.get(partition));
