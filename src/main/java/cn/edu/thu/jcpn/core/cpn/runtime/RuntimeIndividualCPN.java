@@ -17,17 +17,22 @@ import org.apache.logging.log4j.Logger;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import static java.util.stream.Collectors.groupingBy;
+
 public class RuntimeIndividualCPN {
 
     private static Logger logger = LogManager.getLogger();
 
     private static Random random = new Random();
 
-    private GlobalClock globalClock = GlobalClock.getInstance();
-
     private IOwner owner;
     private Map<Integer, RuntimePlace> places;
     private Map<Integer, RuntimeTransition> transitions;
+
+    /**
+     * enable transitions order by priority.
+     */
+    private Map<Integer, List<RuntimeTransition>> priorityTransitions;
 
     private RuntimeFoldingCPN foldingCPN;
 
@@ -119,18 +124,33 @@ public class RuntimeIndividualCPN {
      * @return
      */
     public boolean hasEnableTransitions() {
-        List<RuntimeTransition> enableTransitions = this.getEnableTransitions();
-        return enableTransitions.size() > 0;
+        priorityTransitions = this.getEnableTransitions();
+        return priorityTransitions.size() > 0;
     }
 
-    private List<RuntimeTransition> getEnableTransitions() {
+    private Map<Integer, List<RuntimeTransition>> getEnableTransitions() {
         return this.transitions.values().stream().
-                filter(RuntimeTransition::canFire).collect(Collectors.toList());
+                filter(RuntimeTransition::canFire).collect(groupingBy(RuntimeTransition::getPriority));
     }
 
     public RuntimeTransition randomEnable() {
-        List<RuntimeTransition> enableTransitions = this.getEnableTransitions();
-        return enableTransitions.get(random.nextInt(enableTransitions.size()));
+        Integer[] proritys = priorityTransitions.keySet().toArray(new Integer[] {});
+        if (proritys.length == 0) return null;
+        int randonPrority = proritys[random.nextInt(proritys.length)];
+
+        List<RuntimeTransition> transitions = priorityTransitions.get(randonPrority);
+        if (transitions.isEmpty()) return null;
+        return transitions.get(random.nextInt(transitions.size()));
+    }
+
+    public RuntimeTransition enableByPriority() {
+        Integer[] proritys = priorityTransitions.keySet().toArray(new Integer[] {});
+        if (proritys.length == 0) return null;
+        int highestPrority = proritys[0];
+
+        List<RuntimeTransition> transitions = priorityTransitions.get(highestPrority);
+        if (transitions.isEmpty()) return null;
+        return transitions.get(random.nextInt(transitions.size()));
     }
 
     public OutputToken firing(RuntimeTransition transition) {
