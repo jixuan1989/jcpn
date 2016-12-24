@@ -12,12 +12,11 @@ import java.util.stream.Collectors;
 
 public class RuntimePlace {
 
-    protected int id;
-    protected String name;
+    private int id;
+    private String name;
     protected IOwner owner;
 
-    protected PlaceType type;
-    protected PlaceStrategy placeStrategy;
+    private PlaceStrategy placeStrategy;
 
     /**
      * If it is a local place, then it only has a LocalAsTarget in the three tokenMaps.
@@ -26,18 +25,17 @@ public class RuntimePlace {
      * <br>And in this case, it does not have a LocalAsTarget entry.
      * <br>And the type of the place is COMMUNICATING.
      */
-    protected List<IToken> newlyTokens;
-    protected List<IToken> testedTokens;
-    protected List<IToken> futureTokens;
+    private List<IToken> newlyTokens;
+    private List<IToken> testedTokens;
+    private List<IToken> futureTokens;
 
-    protected GlobalClock globalClock;
-    protected static Random random = new Random();
+    private GlobalClock globalClock;
+    private static Random random = new Random();
 
     public RuntimePlace(IOwner owner, Place place) {
         this.owner = owner;
         this.id = place.getId();
         this.name = place.getName();
-        this.type = place.getType();
         this.placeStrategy = place.getPlaceStrategy();
 
         this.newlyTokens = new ArrayList<>();
@@ -70,14 +68,6 @@ public class RuntimePlace {
 
     public void setPlaceStrategy(PlaceStrategy placeStrategy) {
         this.placeStrategy = placeStrategy;
-    }
-
-    public PlaceType getType() {
-        return type;
-    }
-
-    public void setType(PlaceType type) {
-        this.type = type;
     }
 
     public IOwner getOwner() {
@@ -253,5 +243,5 @@ public class RuntimePlace {
         }
         System.out.println(String.format("\t%d: %s", id, getName()));
         System.out.println(sb.toString());
-    };
+    }
 }

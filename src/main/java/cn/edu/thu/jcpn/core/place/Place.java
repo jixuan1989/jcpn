@@ -1,9 +1,7 @@
 package cn.edu.thu.jcpn.core.place;
 
 import cn.edu.thu.jcpn.core.runtime.tokens.IOwner;
-import cn.edu.thu.jcpn.core.runtime.tokens.ITarget;
 import cn.edu.thu.jcpn.core.runtime.tokens.IToken;
-import cn.edu.thu.jcpn.core.runtime.tokens.LocalAsTarget;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -11,20 +9,16 @@ import java.util.List;
 import java.util.Map;
 
 import static cn.edu.thu.jcpn.core.place.Place.PlaceStrategy.*;
-import static cn.edu.thu.jcpn.core.place.Place.PlaceType.*;
 
 public class Place {
 
     private int id;
     private String name;
-    private PlaceType type;
 
     private PlaceStrategy strategy = BAG;
 
     /**
-     * <owner, target, tokens for this target>
-     * <br>If target is LocalAsTarget, it means the token is used locally.
-     * <br>In this case, the map contains only one <target, tokens> item.
+     * <owner, tokens for this owner>
      */
     private Map<IOwner, List<IToken>> initialTokens;
 
@@ -34,14 +28,6 @@ public class Place {
      */
     public enum PlaceStrategy {
         BAG, FIFO
-    }
-
-    /**
-     * <br>LOCAL : a place is local if it point to a local transition.
-     * <br>COMMUNICATING: a place is communicating if it point to a transmit transition.
-     */
-    public enum PlaceType {
-        LOCAL, COMMUNICATING
     }
 
     public Place() {
@@ -96,14 +82,6 @@ public class Place {
         this.name = name;
     }
 
-    public PlaceType getType() {
-        return type;
-    }
-
-    public void setType(PlaceType type) {
-        this.type = type;
-    }
-
     public Map<IOwner, List<IToken>> getInitialTokens() {
         return initialTokens;
     }
@@ -117,21 +95,8 @@ public class Place {
         tokens.forEach(this::addInitToken);
     }
 
-    /**
-     * TODO: IF PLACE TYPE IS SET, AND A DIFFERENT TYPE TOKEN IS ADDED, A ERROR OCCURS.
-     *
-     * @param token
-     * @return
-     */
     public void addInitToken(IToken token) {
         IOwner owner = token.getOwner();
-        ITarget target = token.getTarget();
-
-        if (target instanceof LocalAsTarget)
-            this.setType(LOCAL);
-        else
-            this.setType(COMMUNICATING);
-
         // 1) check whether the owner exists.
         // 2) add the token into the owner's token list.
         initialTokens.computeIfAbsent(owner, obj -> new ArrayList<>()).add(token);
