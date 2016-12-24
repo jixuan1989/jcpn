@@ -2,6 +2,8 @@ package cn.edu.thu.jcpn.core.cpn.runtime;
 
 import cn.edu.thu.jcpn.common.Pair;
 import cn.edu.thu.jcpn.core.cpn.CPN;
+import cn.edu.thu.jcpn.core.monitor.IPlaceMonitor;
+import cn.edu.thu.jcpn.core.monitor.ITransitionMonitor;
 import cn.edu.thu.jcpn.core.place.Place;
 import cn.edu.thu.jcpn.core.runtime.GlobalClock;
 import cn.edu.thu.jcpn.core.runtime.tokens.IOwner;
@@ -22,6 +24,7 @@ public class RuntimeFoldingCPN {
     private CPN graph;
     private List<IOwner> owners;
     private Map<IOwner, RuntimeIndividualCPN> individualCPNs;
+    private boolean compiled;
 
     /**
      * // set the maximal execution time of CPN global clock.
@@ -30,12 +33,12 @@ public class RuntimeFoldingCPN {
     private GlobalClock globalClock;
     private long maximumExecutionTime;
 
-    private boolean compiled = false;
-
     public RuntimeFoldingCPN(CPN graph, List<IOwner> owners) {
         this.graph = graph;
         this.owners = owners;
         this.individualCPNs = new HashMap<>();
+        this.compiled = false;
+
         this.globalClock = GlobalClock.getInstance();
         this.maximumExecutionTime = Long.MAX_VALUE;
 
@@ -75,6 +78,34 @@ public class RuntimeFoldingCPN {
         return compiled;
     }
 
+    public long getMaximumExecutionTime() {
+        return maximumExecutionTime;
+    }
+
+    public void setMaximumExecutionTime(long maximumExecutionTime) {
+        this.maximumExecutionTime = maximumExecutionTime;
+    }
+
+    public void addMonitor(int pid, IPlaceMonitor monitor) {
+        owners.forEach(owner -> addMonitor(owner, pid, monitor));
+    }
+
+    public void addMonitor(IOwner owner, int pid, IPlaceMonitor monitor) {
+        if (!owners.contains(owner) || !graph.getPlaces().containsKey(pid)) return;
+
+        individualCPNs.get(owner).addMonitor(pid, monitor);
+    }
+
+    public void addMonitor(int tid, ITransitionMonitor monitor) {
+        owners.forEach(owner -> addMonitor(owner, tid, monitor));
+    }
+
+    public void addMonitor(IOwner owner, int tid, ITransitionMonitor monitor) {
+        if (!owners.contains(owner) || !graph.getTransitions().containsKey(tid)) return;
+
+        individualCPNs.get(owner).addMonitor(tid, monitor);
+    }
+
     /**
      * get the individualCPN of the owner.
      *
@@ -91,7 +122,6 @@ public class RuntimeFoldingCPN {
         IOwner realOwner = (owner instanceof LocalAsTarget) ? from : owner;
         return individualCPNs.get(realOwner);
     }
-
 
     /**
      * if the global clock is less than the expected maximum execution Time, we say that it is not timeout,

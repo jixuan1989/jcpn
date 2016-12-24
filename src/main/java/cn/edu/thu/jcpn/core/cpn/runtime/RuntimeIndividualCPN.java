@@ -1,5 +1,7 @@
 package cn.edu.thu.jcpn.core.cpn.runtime;
 
+import cn.edu.thu.jcpn.core.monitor.IPlaceMonitor;
+import cn.edu.thu.jcpn.core.monitor.ITransitionMonitor;
 import cn.edu.thu.jcpn.core.place.Place;
 import cn.edu.thu.jcpn.core.place.runtime.*;
 import cn.edu.thu.jcpn.core.runtime.tokens.IOwner;
@@ -24,7 +26,10 @@ public class RuntimeIndividualCPN {
 
     private IOwner owner;
     private Map<Integer, RuntimePlace> places;
+    private Map<Integer, IPlaceMonitor> placeMonitors;
+
     private Map<Integer, RuntimeTransition> transitions;
+    private Map<Integer, ITransitionMonitor> transitionMonitors;
 
     /**
      * enable transition order by priority.
@@ -37,6 +42,9 @@ public class RuntimeIndividualCPN {
         this.owner = owner;
         places = new HashMap<>();
         transitions = new HashMap<>();
+
+        placeMonitors = new HashMap<>();
+        transitionMonitors = new HashMap<>();
 
         this.foldingCPN = foldingCPN;
     }
@@ -69,12 +77,24 @@ public class RuntimeIndividualCPN {
         return this.places.get(id);
     }
 
-    private void addRuntimePlace(Place place) {
+    private void addPlace(Place place) {
         places.put(place.getId(), new RuntimePlace(owner, place));
     }
 
-    private void addRuntimeTransition(Transition transition) {
+    public void addMonitor(int pid, IPlaceMonitor monitor) {
+        if (!places.containsKey(pid)) return;
+
+        placeMonitors.put(pid, monitor);
+    }
+
+    private void addTransition(Transition transition) {
         transitions.put(transition.getId(), new RuntimeTransition(owner, places, transition, foldingCPN));
+    }
+
+    public void addMonitor(int tid, ITransitionMonitor monitor) {
+        if (!transitions.containsKey(tid)) return;
+
+        transitionMonitors.put(tid, monitor);
     }
 
     /**
@@ -86,8 +106,8 @@ public class RuntimeIndividualCPN {
      */
     public void construct(Collection<Place> places, Collection<Transition> transitions) {
         //copy all the place and transition first.
-        places.forEach(this::addRuntimePlace);
-        transitions.forEach(this::addRuntimeTransition);
+        places.forEach(this::addPlace);
+        transitions.forEach(this::addTransition);
     }
 
     /**
@@ -132,7 +152,7 @@ public class RuntimeIndividualCPN {
     }
 
     public RuntimeTransition randomEnable() {
-        Integer[] proritys = priorityTransitions.keySet().toArray(new Integer[] {});
+        Integer[] proritys = priorityTransitions.keySet().toArray(new Integer[]{});
         if (proritys.length == 0) return null;
         int randonPrority = proritys[random.nextInt(proritys.length)];
 
@@ -142,7 +162,7 @@ public class RuntimeIndividualCPN {
     }
 
     public RuntimeTransition enableByPriority() {
-        Integer[] proritys = priorityTransitions.keySet().toArray(new Integer[] {});
+        Integer[] proritys = priorityTransitions.keySet().toArray(new Integer[]{});
         if (proritys.length == 0) return null;
         int highestPrority = proritys[0];
 
@@ -154,8 +174,29 @@ public class RuntimeIndividualCPN {
     public OutputToken firing(RuntimeTransition transition) {
         InputToken inputToken = transition.getRandmonInputToken();
         transitions.values().forEach(innerTransition -> innerTransition.removeTokenFromCache(inputToken));
-        inputToken.forEach((pid, token) -> places.get(pid).removeTokenFromTest(token));
-        return transition.firing(inputToken);
+        inputToken.forEach((pid, token) -> {
+            places.get(pid).removeTokenFromTest(token);
+            reportWhenConsume(places.get(pid), token, transition);
+        });
+        OutputToken outputToken = transition.firing(inputToken);
+
+        reportWhenFiring(transition, inputToken, outputToken);
+        return outputToken;
+    }
+
+    private void reportWhenConsume(RuntimePlace place, IToken token, RuntimeTransition transition) {
+        if (!placeMonitors.containsKey(place.getId())) return;
+
+        IPlaceMonitor monitor = placeMonitors.get(place.getId());
+        monitor.reportWhenConsume(owner, place.getId(), place.getName(), token, transition.getId(), transition.getName(),
+                place.getTestedTokens(), place.getNewlyTokens(), place.getFutureTokens());
+    }
+
+    private void reportWhenFiring(RuntimeTransition transition, InputToken inputToken, OutputToken outputToken) {
+        if (!transitionMonitors.containsKey(transition.getId())) return;
+
+        ITransitionMonitor monitor = transitionMonitors.get(transition.getId());
+        monitor.reportWhenFiring(owner, transition.getId(), transition.getName(), inputToken, outputToken);
     }
 
     @Override
