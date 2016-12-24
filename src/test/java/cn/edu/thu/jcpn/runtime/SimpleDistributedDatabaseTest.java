@@ -3,7 +3,6 @@ package cn.edu.thu.jcpn.runtime;
 import cn.edu.thu.jcpn.core.cpn.CPN;
 import cn.edu.thu.jcpn.core.cpn.runtime.RuntimeFoldingCPN;
 import cn.edu.thu.jcpn.core.place.Place;
-import cn.edu.thu.jcpn.core.runtime.AutoSimulator;
 import cn.edu.thu.jcpn.core.runtime.GlobalClock;
 import cn.edu.thu.jcpn.core.runtime.tokens.*;
 import cn.edu.thu.jcpn.core.transition.Transition;
@@ -128,13 +127,12 @@ public class SimpleDistributedDatabaseTest {
 
     @Test
     public void test0() throws InterruptedException {
-        AutoSimulator simulator = new AutoSimulator(instance);
-        simulator.compile();
+        instance.compile();
 
         int count = 0;
-        while (simulator.hasNextTime()) {
+        while (instance.hasNextTime()) {
             globalClock.logStatus();
-            simulator.nextRound();
+            instance.nextRound();
 
 //            if (count == 5) {
 //                IOwner owner = owners.get(0);
