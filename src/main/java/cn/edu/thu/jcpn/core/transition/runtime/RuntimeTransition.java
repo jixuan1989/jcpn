@@ -239,6 +239,7 @@ public class RuntimeTransition {
                 tokens.forEach(token -> token.setOwner(to));
                 RuntimePlace targetPlace = getOutPlace(to, pid);
                 targetPlace.addTokens(tokens);
+                //TODO call reprotWhenTokensGenerated()
 
                 tokens.forEach(token -> {
                     // register a event in the timeline.

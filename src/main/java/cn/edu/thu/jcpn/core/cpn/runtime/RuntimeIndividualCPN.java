@@ -176,7 +176,7 @@ public class RuntimeIndividualCPN {
         transitions.values().forEach(innerTransition -> innerTransition.removeTokenFromCache(inputToken));
         inputToken.forEach((pid, token) -> {
             places.get(pid).removeTokenFromTest(token);
-            reportWhenConsume(places.get(pid), token, transition);
+            reportWhenConsumed(places.get(pid), token, transition);
         });
         OutputToken outputToken = transition.firing(inputToken);
 
@@ -184,11 +184,11 @@ public class RuntimeIndividualCPN {
         return outputToken;
     }
 
-    private void reportWhenConsume(RuntimePlace place, IToken token, RuntimeTransition transition) {
+    private void reportWhenConsumed(RuntimePlace place, IToken token, RuntimeTransition transition) {
         if (!placeMonitors.containsKey(place.getId())) return;
 
         IPlaceMonitor monitor = placeMonitors.get(place.getId());
-        monitor.reportWhenConsume(owner, place.getId(), place.getName(), token, transition.getId(), transition.getName(),
+        monitor.reportWhenTokensConsumed(owner, place.getId(), place.getName(), token, transition.getId(), transition.getName(),
                 place.getTestedTokens(), place.getNewlyTokens(), place.getFutureTokens());
     }
 
