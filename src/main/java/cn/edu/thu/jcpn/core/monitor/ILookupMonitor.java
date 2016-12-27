@@ -8,7 +8,7 @@ import java.util.Collection;
 /**
  * Created by leven on 2016/12/24.
  */
-public interface IPlaceMonitor {
+public interface ILookupMonitor {
 
     void reportWhenTokensConsumed(INode owner, int placeId, String placeName, IToken consumed, int transitionId, String transitionName,
                                   Collection<IToken> tested, Collection<IToken> newly, Collection<IToken> future);
