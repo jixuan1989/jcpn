@@ -156,6 +156,7 @@ public class RuntimeFoldingCPN {
         Pair<GlobalClock.EventType, Map.Entry<Long, Map<INode, Object>>> nextEventTimeOwner = globalClock.timeElapse();
         GlobalClock.EventType eventType = nextEventTimeOwner.getLeft();
         Map.Entry<Long, Map<INode, Object>> timeOwner = nextEventTimeOwner.getRight();
+        System.out.println("current status:");
         logStatus();
         globalClock.logStatus();
         if (eventType.equals(SENDING)) {
