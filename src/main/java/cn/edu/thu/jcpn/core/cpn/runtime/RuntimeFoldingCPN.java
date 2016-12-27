@@ -156,6 +156,8 @@ public class RuntimeFoldingCPN {
         Pair<GlobalClock.EventType, Map.Entry<Long, Map<INode, Object>>> nextEventTimeOwner = globalClock.timeElapse();
         GlobalClock.EventType eventType = nextEventTimeOwner.getLeft();
         Map.Entry<Long, Map<INode, Object>> timeOwner = nextEventTimeOwner.getRight();
+        logStatus();
+        globalClock.logStatus();
         if (eventType.equals(SENDING)) {
             logger.trace(() -> "will get next sending event..." + timeOwner);
             System.out.println("run sending events:");
@@ -165,8 +167,6 @@ public class RuntimeFoldingCPN {
             System.out.println("run running events:");
             timeOwner.getValue().keySet().parallelStream().forEach(owner -> runACPNInstance(getIndividualCPN(owner)));
         }
-
-        logStatus();
         return true;
     }
 

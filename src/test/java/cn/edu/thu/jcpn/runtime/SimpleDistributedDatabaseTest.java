@@ -127,7 +127,6 @@ public class SimpleDistributedDatabaseTest {
 
         int count = 0;
         while (instance.hasNextTime()) {
-            globalClock.logStatus();
             instance.nextRound();
 
 //            if (count == 5) {

@@ -205,7 +205,7 @@ public class RuntimeIndividualCPN {
     }
 
     public void logStatus() {
-        System.out.println("--------------------------------owner: " + owner + "----------------------------------");
+        System.out.println("--------------------------------node: " + owner + "----------------------------------");
         places.values().forEach(RuntimePlace::logStatus);
     }
 }

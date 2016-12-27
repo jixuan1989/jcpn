@@ -107,13 +107,13 @@ public class GlobalClock {
     public void logStatus() {
         StringBuilder sb = new StringBuilder();
         timelineForRunning.forEach((time, owners) -> {
-            sb.append("time: " + time + ", running owners: ");
+            sb.append("time: " + time + ", running nodes: ");
             owners.forEach((owner, obj) -> sb.append(owner + "\t"));
             sb.append("\n");
         });
 
         timelineForSending.forEach((time, owners) -> {
-            sb.append("time: " + time + ", sending owners: ");
+            sb.append("time: " + time + ", sending nodes: ");
             owners.forEach((owner, obj) -> sb.append(owner + "\t"));
             sb.append("\n");
         });

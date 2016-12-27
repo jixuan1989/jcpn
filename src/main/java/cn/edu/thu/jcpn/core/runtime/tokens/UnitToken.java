@@ -15,7 +15,7 @@ public class UnitToken extends IToken {
 
     @Override
     public String toString() {
-        return "UnitToken [time=" + time + "]";
+        return "UnitToken {owner=" + owner + ",time=" + time + "}";
     }
 
     public UnitToken() {

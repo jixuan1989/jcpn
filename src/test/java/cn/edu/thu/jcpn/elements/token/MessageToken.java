@@ -30,7 +30,10 @@ public class MessageToken extends IToken {
     @Override
     public String toString() {
         return "MessageToken{" +
-                "message=" + message +
+                "from=" + from +
+                ",owner=" + owner +
+                ",to=" + to +
+                ",message=" + message +
                 '}';
     }
 }
