@@ -1,8 +1,8 @@
 package cn.edu.thu.jcpn.core.runtime;
 
 import cn.edu.thu.jcpn.common.Pair;
-import cn.edu.thu.jcpn.core.runtime.tokens.IOwner;
 
+import cn.edu.thu.jcpn.core.runtime.tokens.INode;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -38,10 +38,10 @@ public class GlobalClock {
     }
 
     // <time, owner, redundant>, redundant value is useless, because java skipListMap doesn't have a concurrent HashSet implementation.
-    ConcurrentSkipListMap<Long, Map<IOwner, Object>> timelineForRunning = new ConcurrentSkipListMap<>();
-    ConcurrentSkipListMap<Long, Map<IOwner, Object>> timelineForSending = new ConcurrentSkipListMap<>();
+    ConcurrentSkipListMap<Long, Map<INode, Object>> timelineForRunning = new ConcurrentSkipListMap<>();
+    ConcurrentSkipListMap<Long, Map<INode, Object>> timelineForSending = new ConcurrentSkipListMap<>();
 
-    public void addAbsoluteTimepointForRunning(IOwner owner, long absolutiveTime) {
+    public void addAbsoluteTimepointForRunning(INode owner, long absolutiveTime) {
         timelineForRunning.computeIfAbsent(absolutiveTime, obj -> new ConcurrentHashMap<>()).putIfAbsent(owner, owner);
     }
 
@@ -51,7 +51,7 @@ public class GlobalClock {
      * @param owner
      * @param absolutiveTime
      */
-    public void addAbsoluteTimepointForSending(IOwner owner, long absolutiveTime) {
+    public void addAbsoluteTimepointForSending(INode owner, long absolutiveTime) {
         timelineForSending.computeIfAbsent(absolutiveTime, obj -> new ConcurrentHashMap<>()).putIfAbsent(owner, owner);
     }
 
@@ -72,7 +72,7 @@ public class GlobalClock {
      * @return  eventType(sending or running), timePoint, event owners ( Value in the map, i.e., Object, is meaningless)
      *          null if no events registered.
      */
-    public Pair<EventType, Entry<Long, Map<IOwner, Object>>> timeElapse() {
+    public Pair<EventType, Entry<Long, Map<INode, Object>>> timeElapse() {
         if (this.hasNextRunningTime() && this.hasNextSendingTime()) {
             long nextRunTime = timelineForRunning.firstKey();
             long nextSendTime = timelineForSending.firstKey();

@@ -1,6 +1,6 @@
 package cn.edu.thu.jcpn.core.transition.condition;
 
-import cn.edu.thu.jcpn.core.runtime.tokens.ITarget;
+import cn.edu.thu.jcpn.core.runtime.tokens.INode;
 import cn.edu.thu.jcpn.core.runtime.tokens.IToken;
 
 import java.util.ArrayList;
@@ -10,24 +10,24 @@ import java.util.Map;
 
 
 /**
- * <target, pid, tokens>, output to pid place of the target server with tokens.
+ * <to, pid, tokens>, output to pid place of the to server with tokens.
  *
  * Created by leven on 2016/12/7.
  */
-public class OutputToken extends HashMap<ITarget, Map<Integer, List<IToken>>> {
+public class OutputToken extends HashMap<INode, Map<Integer, List<IToken>>> {
 
     public OutputToken() {
         super();
     }
 
     /**
-     * note: if return null, it means this tokenSet does not contain (target, pid)'s tokens.
+     * note: if return null, it means this tokenSet does not contain (to, pid)'s tokens.
      *
      * @param target
      * @param pid
      * @return
      */
-    public List<IToken> get(ITarget target, int pid) {
+    public List<IToken> get(INode target, int pid) {
         return super.getOrDefault(target, new HashMap<>()).get(pid);
     }
 
@@ -38,7 +38,7 @@ public class OutputToken extends HashMap<ITarget, Map<Integer, List<IToken>>> {
      * @param pid
      * @param token
      */
-    public void addToken(ITarget target, int pid, IToken token) {
+    public void addToken(INode target, int pid, IToken token) {
         super.computeIfAbsent(target, obj -> new HashMap<>()).
                 computeIfAbsent(pid, obj -> new ArrayList<>()).add(token);
     }
@@ -55,7 +55,7 @@ public class OutputToken extends HashMap<ITarget, Map<Integer, List<IToken>>> {
         return this;
     }
 
-    public void removeToken(ITarget target, int pid, IToken token) {
+    public void removeToken(INode target, int pid, IToken token) {
         super.getOrDefault(target, new HashMap<>()).getOrDefault(pid, new ArrayList<>()).remove(token);
     }
 }

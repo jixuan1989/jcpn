@@ -1,7 +1,6 @@
 package cn.edu.thu.jcpn.elements.token;
 
-import cn.edu.thu.jcpn.core.runtime.tokens.IOwner;
-import cn.edu.thu.jcpn.core.runtime.tokens.ITarget;
+import cn.edu.thu.jcpn.core.runtime.tokens.INode;
 import cn.edu.thu.jcpn.core.runtime.tokens.IToken;
 
 /**
@@ -15,8 +14,8 @@ public class MessageToken extends IToken {
         this.message = message;
     }
 
-    public MessageToken(IOwner owner, ITarget target, int message) {
-        super(owner, target);
+    public MessageToken(INode from, INode owner, INode to, int message) {
+        super(from, owner, to);
         this.message = message;
     }
 

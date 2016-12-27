@@ -22,17 +22,4 @@ public class UnitToken extends IToken {
         super();
         time = GlobalClock.getInstance().getTime();
     }
-
-    public UnitToken(IOwner owner, ITarget target) {
-        super();
-        this.owner = owner;
-        this.target = target;
-        this.time = GlobalClock.getInstance().getTime();
-    }
-
-    public static List<IToken> generateList(int number) {
-        List<IToken> list = new ArrayList<>();
-        IntStream.range(0, number).forEach(i -> list.add(new UnitToken()));
-        return list;
-    }
 }

@@ -3,7 +3,7 @@ package cn.edu.thu.jcpn.core.place.runtime;
 import cn.edu.thu.jcpn.core.place.Place;
 import cn.edu.thu.jcpn.core.place.Place.*;
 import cn.edu.thu.jcpn.core.runtime.GlobalClock;
-import cn.edu.thu.jcpn.core.runtime.tokens.IOwner;
+import cn.edu.thu.jcpn.core.runtime.tokens.INode;
 import cn.edu.thu.jcpn.core.runtime.tokens.IToken;
 
 import java.util.*;
@@ -14,14 +14,14 @@ public class RuntimePlace {
 
     private int id;
     private String name;
-    protected IOwner owner;
+    protected INode owner;
 
     private PlaceStrategy placeStrategy;
 
     /**
      * If it is a local place, then it only has a LocalAsTarget in the three tokenMaps.
      * <br>And the type of the place is LOCAL.
-     * <br>Else, it has multi target entry, for each target, it may exists several tokens.
+     * <br>Else, it has multi to entry, for each to, it may exists several tokens.
      * <br>And in this case, it does not have a LocalAsTarget entry.
      * <br>And the type of the place is COMMUNICATING.
      */
@@ -32,7 +32,7 @@ public class RuntimePlace {
     private GlobalClock globalClock;
     private static Random random = new Random();
 
-    public RuntimePlace(IOwner owner, Place place) {
+    public RuntimePlace(INode owner, Place place) {
         this.owner = owner;
         this.id = place.getId();
         this.name = place.getName();
@@ -70,11 +70,11 @@ public class RuntimePlace {
         this.placeStrategy = placeStrategy;
     }
 
-    public IOwner getOwner() {
+    public INode getOwner() {
         return owner;
     }
 
-    public void setOwner(IOwner owner) {
+    public void setOwner(INode owner) {
         this.owner = owner;
     }
 
@@ -110,12 +110,6 @@ public class RuntimePlace {
 
     public void addToken(IToken token) {
         if (null == token) return;
-
-        // remote message.
-        if (token.getTarget().equals(owner)) {
-            token.setTarget(token.getOwner());
-            token.setOwner(owner);
-        }
 
         if (this.getPlaceStrategy().equals(PlaceStrategy.BAG)) {
             addTokenBAG(token);

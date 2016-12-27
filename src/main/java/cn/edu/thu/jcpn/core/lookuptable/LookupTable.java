@@ -1,6 +1,6 @@
 package cn.edu.thu.jcpn.core.lookuptable;
 
-import cn.edu.thu.jcpn.core.runtime.tokens.IOwner;
+import cn.edu.thu.jcpn.core.runtime.tokens.INode;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -16,7 +16,7 @@ public class LookupTable {
     /**
      * <owner, properties for this owner>
      */
-    private Map<IOwner, Map<String, String>> initProperties;
+    private Map<INode, Map<String, String>> initProperties;
 
     public LookupTable() {
         initProperties = new HashMap<>();
@@ -48,15 +48,15 @@ public class LookupTable {
         this.name = name;
     }
 
-    public Map<IOwner, Map<String, String>> getInitProperties() {
+    public Map<INode, Map<String, String>> getInitProperties() {
         return initProperties;
     }
 
-    public void setInitProperties(Map<IOwner, Map<String, String>> initProperties) {
+    public void setInitProperties(Map<INode, Map<String, String>> initProperties) {
         this.initProperties = initProperties;
     }
 
-    public void addInitProperties(IOwner owner, Map<String, String> properties) {
+    public void addInitProperties(INode owner, Map<String, String> properties) {
         initProperties.put(owner, properties);
     }
 
@@ -64,12 +64,12 @@ public class LookupTable {
         initProperties.keySet().forEach(owner -> addInitProperty(owner, key, value));
     }
 
-    public LookupTable addInitProperty(IOwner owner, String key, String value) {
+    public LookupTable addInitProperty(INode owner, String key, String value) {
         initProperties.computeIfAbsent(owner, obj -> new HashMap<>()).put(key, value);
         return this;
     }
 
-    public Map<String, String> getPropertiesByOwner(IOwner owner) {
+    public Map<String, String> getPropertiesByOwner(INode owner) {
         return initProperties.get(owner);
     }
 }

@@ -1,40 +1,49 @@
 package cn.edu.thu.jcpn.core.runtime.tokens;
 
 /**
- * basic colset interface, all colsets must implement this interface.
+ * basic token interface, all tokens must implement this interface.
  *
  * @author hxd
  */
 public abstract class IToken {
 
-    protected IOwner owner;
-    protected ITarget target;
+    protected INode from;
+    protected INode owner;
+    protected INode to;
 
     protected long time;
 
     protected IToken() {
-
     }
 
-    protected IToken(IOwner owner, ITarget target) {
+    protected IToken(INode from, INode owner, INode to) {
+        this.from = from;
         this.owner = owner;
-        this.target = target;
+        this.to = to;
     }
 
-    public IOwner getOwner() {
+    public INode getFrom() {
+        return from;
+    }
+
+    public void setFrom(INode from) {
+        this.from = from;
+    }
+
+    public INode getOwner() {
         return owner;
     }
 
-    public void setOwner(IOwner owner) {
+    public void setOwner(INode owner) {
         this.owner = owner;
     }
 
-    public ITarget getTarget() {
-        return target;
+    public INode getTo() {
+        return to;
     }
 
-    public void setTarget(ITarget target) {
-        this.target = target;
+    public void setTo(INode to) {
+        this.to = to;
     }
 
     public long getTime() {

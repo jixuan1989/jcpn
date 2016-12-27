@@ -4,7 +4,7 @@ import cn.edu.thu.jcpn.core.monitor.IPlaceMonitor;
 import cn.edu.thu.jcpn.core.monitor.ITransitionMonitor;
 import cn.edu.thu.jcpn.core.place.Place;
 import cn.edu.thu.jcpn.core.place.runtime.*;
-import cn.edu.thu.jcpn.core.runtime.tokens.IOwner;
+import cn.edu.thu.jcpn.core.runtime.tokens.INode;
 import cn.edu.thu.jcpn.core.runtime.tokens.IToken;
 import cn.edu.thu.jcpn.core.transition.Transition;
 import cn.edu.thu.jcpn.core.transition.condition.InputToken;
@@ -24,7 +24,7 @@ public class RuntimeIndividualCPN {
 
     private static Random random = new Random();
 
-    private IOwner owner;
+    private INode owner;
     private Map<Integer, RuntimePlace> places;
     private Map<Integer, IPlaceMonitor> placeMonitors;
 
@@ -38,7 +38,7 @@ public class RuntimeIndividualCPN {
 
     private RuntimeFoldingCPN foldingCPN;
 
-    public RuntimeIndividualCPN(IOwner owner, RuntimeFoldingCPN foldingCPN) {
+    public RuntimeIndividualCPN(INode owner, RuntimeFoldingCPN foldingCPN) {
         this.owner = owner;
         places = new HashMap<>();
         transitions = new HashMap<>();
@@ -49,11 +49,11 @@ public class RuntimeIndividualCPN {
         this.foldingCPN = foldingCPN;
     }
 
-    public IOwner getOwner() {
+    public INode getOwner() {
         return owner;
     }
 
-    public void setOwner(IOwner owner) {
+    public void setOwner(INode owner) {
         this.owner = owner;
     }
 

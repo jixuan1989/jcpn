@@ -3,12 +3,10 @@ package cn.edu.thu.jcpn.core.transition.runtime;
 import cn.edu.thu.jcpn.core.cpn.runtime.RuntimeFoldingCPN;
 import cn.edu.thu.jcpn.core.cpn.runtime.RuntimeIndividualCPN;
 import cn.edu.thu.jcpn.core.place.Place;
-import cn.edu.thu.jcpn.core.runtime.tokens.IOwner;
+import cn.edu.thu.jcpn.core.runtime.tokens.INode;
 import cn.edu.thu.jcpn.core.place.runtime.RuntimePlace;
 import cn.edu.thu.jcpn.core.runtime.GlobalClock;
-import cn.edu.thu.jcpn.core.runtime.tokens.ITarget;
 import cn.edu.thu.jcpn.core.runtime.tokens.IToken;
-import cn.edu.thu.jcpn.core.runtime.tokens.LocalAsTarget;
 import cn.edu.thu.jcpn.core.transition.Transition;
 import cn.edu.thu.jcpn.core.transition.condition.Condition;
 import cn.edu.thu.jcpn.core.transition.condition.InputToken;
@@ -32,11 +30,13 @@ public class RuntimeTransition {
 
     private int id;
     private String name;
-    private IOwner owner;
+    private INode owner;
     private int priority = 500;
 
     private Map<Integer, RuntimePlace> inPlaces;
-    private Map<ITarget, Map<Integer, RuntimePlace>> outPlaces;
+
+    // <to, <pid, place>>
+    private Map<INode, Map<Integer, RuntimePlace>> outPlaces;
 
     private Condition condition;
     private Function<InputToken, OutputToken> outputFunction;
@@ -50,7 +50,7 @@ public class RuntimeTransition {
      */
     private RuntimeFoldingCPN foldingCPN;
 
-    public RuntimeTransition(IOwner owner, Map<Integer, RuntimePlace> runtimePlaces,
+    public RuntimeTransition(INode owner, Map<Integer, RuntimePlace> runtimePlaces,
                              Transition transition, RuntimeFoldingCPN foldingCPN) {
 
         this.id = transition.getId();
@@ -73,8 +73,8 @@ public class RuntimeTransition {
     private void initInPlaces(Set<Place> places, Map<Integer, RuntimePlace> runtimePlaces) {
         inPlaces = new HashMap<>();
         places.forEach(place -> {
-            RuntimePlace inPlace = runtimePlaces.get(place.getId());
-            inPlaces.put(inPlace.getId(), inPlace);
+            RuntimePlace inRuntimePlace = runtimePlaces.get(place.getId());
+            inPlaces.put(inRuntimePlace.getId(), inRuntimePlace);
         });
     }
 
@@ -90,11 +90,9 @@ public class RuntimeTransition {
     }
 
     private PlacePartition getFreePartition() {
-        PlacePartition conditionPartition = PlacePartition.combine(condition.getPlacePartition());
         PlacePartition completePartition = PlacePartition.generate(inPlaces.values());
-        PlacePartition complementPartition = completePartition.subtract(conditionPartition);
-
-        return complementPartition;
+        PlacePartition conditionPartition = PlacePartition.combine(condition.getPlacePartition());
+        return completePartition.subtract(conditionPartition);
     }
 
     public Integer getId() {
@@ -113,11 +111,11 @@ public class RuntimeTransition {
         this.name = name;
     }
 
-    public IOwner getOwner() {
+    public INode getOwner() {
         return owner;
     }
 
-    public void setOwner(IOwner owner) {
+    public void setOwner(INode owner) {
         this.owner = owner;
     }
 
@@ -145,11 +143,11 @@ public class RuntimeTransition {
         this.inPlaces = inPlaces;
     }
 
-    public Map<ITarget, Map<Integer, RuntimePlace>> getOutPlaces() {
+    public Map<INode, Map<Integer, RuntimePlace>> getOutPlaces() {
         return outPlaces;
     }
 
-    public void setOutPlaces(Map<ITarget, Map<Integer, RuntimePlace>> outPlaces) {
+    public void setOutPlaces(Map<INode, Map<Integer, RuntimePlace>> outPlaces) {
         this.outPlaces = outPlaces;
     }
 
@@ -169,7 +167,7 @@ public class RuntimeTransition {
      * <br> (However, this method does not implement it, a CPNInstance class needs to control that)
      */
     public void checkNewlyTokens4Firing() {
-        // for each partition, ask input place for tokens available for the target.
+        // for each partition, ask input place for tokens available for the to.
         cache.keySet().forEach(this::checkNewlyTokens4Firing);
     }
 
@@ -177,7 +175,7 @@ public class RuntimeTransition {
         List<InputToken> availableTokens = new ArrayList<>();
         InputToken tokenSet = new InputToken();
         findAndSave(partition, tokenSet, availableTokens, 0);
-        // Map<ITarget, Map<PlacePartition, List<InputToken>>> cache;
+        // Map<INode, Map<PlacePartition, List<InputToken>>> cache;
         cache.get(partition).addAll(availableTokens);
     }
 
@@ -232,36 +230,37 @@ public class RuntimeTransition {
         if (outputFunction == null) return null;
         OutputToken outputTokens = this.outputFunction.apply(inputTokens);
 
-        for (Entry<ITarget, Map<Integer, List<IToken>>> targetPidTokens : outputTokens.entrySet()) {
-            ITarget target = targetPidTokens.getKey();
+        for (Entry<INode, Map<Integer, List<IToken>>> toPidTokens : outputTokens.entrySet()) {
+            INode to = toPidTokens.getKey();
 
             long time = globalClock.getTime();
-            for (Entry<Integer, List<IToken>> pidTokens : targetPidTokens.getValue().entrySet()) {
+            for (Entry<Integer, List<IToken>> pidTokens : toPidTokens.getValue().entrySet()) {
                 int pid = pidTokens.getKey();
                 List<IToken> tokens = pidTokens.getValue();
-                RuntimePlace targetPlace = getOutPlace(target, pid);
+                tokens.forEach(token -> token.setOwner(to));
+                RuntimePlace targetPlace = getOutPlace(to, pid);
                 targetPlace.addTokens(tokens);
 
                 time = tokens.get(0).getTime();
             }
             // register a event in the timeline.
-            if (target instanceof LocalAsTarget) {
+            if (owner.equals(to)) {
                 globalClock.addAbsoluteTimepointForRunning(owner, time);
             } else {
-                globalClock.addAbsoluteTimepointForSending((IOwner) target, time);
+                globalClock.addAbsoluteTimepointForSending(to, time);
             }
         }
         return outputTokens;
     }
 
-    private RuntimePlace getOutPlace(ITarget target, int pid) {
-        Map<Integer, RuntimePlace> targetPlaces = outPlaces.computeIfAbsent(target, obj -> new HashMap<>());
-        if (targetPlaces.isEmpty() || !targetPlaces.containsKey(pid)) {
-            RuntimeIndividualCPN targetCPN = foldingCPN.getIndividualCPN((IOwner) target, owner);
-            RuntimePlace targetPlace = targetCPN.getPlace(pid);
-            targetPlaces.put(pid, targetPlace);
+    private RuntimePlace getOutPlace(INode to, int pid) {
+        Map<Integer, RuntimePlace> toPlaces = outPlaces.computeIfAbsent(to, obj -> new HashMap<>());
+        if (toPlaces.isEmpty() || !toPlaces.containsKey(pid)) {
+            RuntimeIndividualCPN toCPN = foldingCPN.getIndividualCPN(to);
+            RuntimePlace toPlace = toCPN.getPlace(pid);
+            toPlaces.put(pid, toPlace);
         }
-        return targetPlaces.get(pid);
+        return toPlaces.get(pid);
     }
 
     public Map<PlacePartition, List<InputToken>> getAllAvailableTokens() {

@@ -10,6 +10,8 @@ import java.util.*;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
+import static cn.edu.thu.jcpn.core.transition.Transition.TransitionType.LOCAL;
+
 public class Transition {
 
     private int id;
@@ -27,10 +29,24 @@ public class Transition {
         LOCAL, TRANSMIT
     }
 
+    public Transition() {
+        this.type = LOCAL;
+    }
+
     public Transition(int id, String name) {
-        super();
+        this();
         this.id = id;
         this.name = name;
+        inPlaces = new HashSet<>();
+        outPlaces = new HashSet<>();
+        condition = new Condition();
+    }
+
+    public Transition(int id, String name, TransitionType type) {
+        this();
+        this.id = id;
+        this.name = name;
+        this.type = type;
         inPlaces = new HashSet<>();
         outPlaces = new HashSet<>();
         condition = new Condition();

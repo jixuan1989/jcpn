@@ -1,23 +1,23 @@
 package cn.edu.thu.jcpn.core.runtime.tokens;
 
-public class StringOwner implements IOwner {
+public class StringNode implements INode {
 
-    private String owner;
+    private String name;
 
-    public StringOwner(String owner) {
-        this.owner = owner;
+    public StringNode(String name) {
+        this.name = name;
     }
 
     @Override
     public String getName() {
-        return this.owner;
+        return this.name;
     }
 
     @Override
     public int hashCode() {
         final int prime = 31;
         int result = 1;
-        result = prime * result + ((owner == null) ? 0 : owner.hashCode());
+        result = prime * result + ((name == null) ? 0 : name.hashCode());
         return result;
     }
 
@@ -29,17 +29,17 @@ public class StringOwner implements IOwner {
             return false;
         if (getClass() != obj.getClass())
             return false;
-        StringOwner other = (StringOwner) obj;
-        if (owner == null) {
-            if (other.owner != null)
+        StringNode other = (StringNode) obj;
+        if (name == null) {
+            if (other.name != null)
                 return false;
-        } else if (!owner.equals(other.owner))
+        } else if (!name.equals(other.name))
             return false;
         return true;
     }
 
     @Override
     public String toString() {
-        return owner;
+        return name;
     }
 }

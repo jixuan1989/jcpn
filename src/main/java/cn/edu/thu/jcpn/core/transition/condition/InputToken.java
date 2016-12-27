@@ -21,7 +21,7 @@ public class InputToken extends HashMap<Integer, IToken> {
     }
 
     /**
-     * note: if return null, it means this tokenSet does not contain (target, pid)'s tokens.
+     * note: if return null, it means this tokenSet does not contain (to, pid)'s tokens.
      *
      * @param pid
      * @return

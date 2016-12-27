@@ -1,6 +1,6 @@
 package cn.edu.thu.jcpn.core.monitor;
 
-import cn.edu.thu.jcpn.core.runtime.tokens.IOwner;
+import cn.edu.thu.jcpn.core.runtime.tokens.INode;
 import cn.edu.thu.jcpn.core.transition.condition.InputToken;
 import cn.edu.thu.jcpn.core.transition.condition.OutputToken;
 
@@ -9,5 +9,5 @@ import cn.edu.thu.jcpn.core.transition.condition.OutputToken;
  */
 public interface ITransitionMonitor {
 
-    void reportWhenFiring(IOwner owner, int transitionId, String transitionName, InputToken inputToken, OutputToken outputToken);
+    void reportWhenFiring(INode owner, int transitionId, String transitionName, InputToken inputToken, OutputToken outputToken);
 }

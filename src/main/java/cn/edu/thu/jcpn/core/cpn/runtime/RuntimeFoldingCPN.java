@@ -6,8 +6,7 @@ import cn.edu.thu.jcpn.core.monitor.IPlaceMonitor;
 import cn.edu.thu.jcpn.core.monitor.ITransitionMonitor;
 import cn.edu.thu.jcpn.core.place.Place;
 import cn.edu.thu.jcpn.core.runtime.GlobalClock;
-import cn.edu.thu.jcpn.core.runtime.tokens.IOwner;
-import cn.edu.thu.jcpn.core.runtime.tokens.LocalAsTarget;
+import cn.edu.thu.jcpn.core.runtime.tokens.INode;
 import cn.edu.thu.jcpn.core.transition.Transition;
 import cn.edu.thu.jcpn.core.transition.runtime.RuntimeTransition;
 import org.apache.logging.log4j.LogManager;
@@ -22,8 +21,8 @@ public class RuntimeFoldingCPN {
     private static Logger logger = LogManager.getLogger();
 
     private CPN graph;
-    private List<IOwner> owners;
-    private Map<IOwner, RuntimeIndividualCPN> individualCPNs;
+    private List<INode> owners;
+    private Map<INode, RuntimeIndividualCPN> individualCPNs;
     private boolean compiled;
 
     /**
@@ -33,7 +32,7 @@ public class RuntimeFoldingCPN {
     private GlobalClock globalClock;
     private long maximumExecutionTime;
 
-    public RuntimeFoldingCPN(CPN graph, List<IOwner> owners) {
+    public RuntimeFoldingCPN(CPN graph, List<INode> owners) {
         this.graph = graph;
         this.owners = owners;
         this.individualCPNs = new HashMap<>();
@@ -58,7 +57,7 @@ public class RuntimeFoldingCPN {
         Collection<Place> places = graph.getPlaces().values();
         Collection<Transition> transitions = graph.getTransitions().values();
 
-        for (IOwner owner : owners) {
+        for (INode owner : owners) {
             RuntimeIndividualCPN individualCPN = new RuntimeIndividualCPN(owner, this);
             individualCPN.construct(places, transitions);
             individualCPNs.put(owner, individualCPN);
@@ -70,7 +69,7 @@ public class RuntimeFoldingCPN {
         return compiled;
     }
 
-    public List<IOwner> getOwners() {
+    public List<INode> getOwners() {
         return owners;
     }
 
@@ -90,7 +89,7 @@ public class RuntimeFoldingCPN {
         owners.forEach(owner -> addMonitor(owner, pid, monitor));
     }
 
-    public void addMonitor(IOwner owner, int pid, IPlaceMonitor monitor) {
+    public void addMonitor(INode owner, int pid, IPlaceMonitor monitor) {
         if (!owners.contains(owner) || !graph.getPlaces().containsKey(pid)) return;
 
         individualCPNs.get(owner).addMonitor(pid, monitor);
@@ -100,7 +99,7 @@ public class RuntimeFoldingCPN {
         owners.forEach(owner -> addMonitor(owner, tid, monitor));
     }
 
-    public void addMonitor(IOwner owner, int tid, ITransitionMonitor monitor) {
+    public void addMonitor(INode owner, int tid, ITransitionMonitor monitor) {
         if (!owners.contains(owner) || !graph.getTransitions().containsKey(tid)) return;
 
         individualCPNs.get(owner).addMonitor(tid, monitor);
@@ -109,18 +108,18 @@ public class RuntimeFoldingCPN {
     /**
      * get the individualCPN of the owner.
      *
-     * note: if the method is called by a transition, it will get the target(remote) individual CPN.
+     * note: if the method is called by a transition, it will get the to(remote) individual CPN.
      * and if the owner is a LocalAsTarget type, it means get the owner itself. So the owner 'from'
      * represents the owner of the transition.
      * If you will not pass a LocalAsTarget type of owner, you may just pass the 'null' to the second param.
      *
      * @param owner the owner of the individual CPN you want to get.
-     * @param from the real owner if the first param is LocalAsTarget Type.
      * @return
      */
-    public RuntimeIndividualCPN getIndividualCPN(IOwner owner, IOwner from) {
-        IOwner realOwner = (owner instanceof LocalAsTarget) ? from : owner;
-        return individualCPNs.get(realOwner);
+    public RuntimeIndividualCPN getIndividualCPN(INode owner) {
+        //INode realOwner = (owner instanceof LocalAsTarget) ? from : owner;
+        //return individualCPNs.get(realOwner);
+        return individualCPNs.get(owner);
     }
 
     /**
@@ -154,17 +153,17 @@ public class RuntimeFoldingCPN {
             return false;
         }
 
-        Pair<GlobalClock.EventType, Map.Entry<Long, Map<IOwner, Object>>> nextEventTimeOwner = globalClock.timeElapse();
+        Pair<GlobalClock.EventType, Map.Entry<Long, Map<INode, Object>>> nextEventTimeOwner = globalClock.timeElapse();
         GlobalClock.EventType eventType = nextEventTimeOwner.getLeft();
-        Map.Entry<Long, Map<IOwner, Object>> timeOwner = nextEventTimeOwner.getRight();
+        Map.Entry<Long, Map<INode, Object>> timeOwner = nextEventTimeOwner.getRight();
         if (eventType.equals(SENDING)) {
             logger.trace(() -> "will get next sending event..." + timeOwner);
             System.out.println("run sending events:");
-            timeOwner.getValue().keySet().parallelStream().forEach(owner -> runACPNInstance(getIndividualCPN(owner, null)));
+            timeOwner.getValue().keySet().parallelStream().forEach(owner -> runACPNInstance(getIndividualCPN(owner)));
         } else {
             logger.trace(() -> "will get next running event..." + timeOwner);
             System.out.println("run running events:");
-            timeOwner.getValue().keySet().parallelStream().forEach(owner -> runACPNInstance(getIndividualCPN(owner, null)));
+            timeOwner.getValue().keySet().parallelStream().forEach(owner -> runACPNInstance(getIndividualCPN(owner)));
         }
 
         logStatus();

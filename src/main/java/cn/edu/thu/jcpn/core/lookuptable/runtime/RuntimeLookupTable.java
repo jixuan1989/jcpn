@@ -1,7 +1,7 @@
 package cn.edu.thu.jcpn.core.lookuptable.runtime;
 
 import cn.edu.thu.jcpn.core.lookuptable.LookupTable;
-import cn.edu.thu.jcpn.core.runtime.tokens.IOwner;
+import cn.edu.thu.jcpn.core.runtime.tokens.INode;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -13,11 +13,11 @@ public class RuntimeLookupTable {
 
     private int id;
     private String name;
-    protected IOwner owner;
+    protected INode owner;
 
     private Map<String, String> properties;
 
-    public RuntimeLookupTable(IOwner owner, LookupTable lookupTable) {
+    public RuntimeLookupTable(INode owner, LookupTable lookupTable) {
         this.owner = owner;
         this.id = lookupTable.getId();
         this.name = lookupTable.getName();
@@ -41,11 +41,11 @@ public class RuntimeLookupTable {
         this.name = name;
     }
 
-    public IOwner getOwner() {
+    public INode getOwner() {
         return owner;
     }
 
-    public void setOwner(IOwner owner) {
+    public void setOwner(INode owner) {
         this.owner = owner;
     }
 

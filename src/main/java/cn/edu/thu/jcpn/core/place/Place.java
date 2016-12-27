@@ -1,6 +1,6 @@
 package cn.edu.thu.jcpn.core.place;
 
-import cn.edu.thu.jcpn.core.runtime.tokens.IOwner;
+import cn.edu.thu.jcpn.core.runtime.tokens.INode;
 import cn.edu.thu.jcpn.core.runtime.tokens.IToken;
 
 import java.util.ArrayList;
@@ -9,18 +9,20 @@ import java.util.List;
 import java.util.Map;
 
 import static cn.edu.thu.jcpn.core.place.Place.PlaceStrategy.*;
+import static cn.edu.thu.jcpn.core.place.Place.PlaceType.*;
 
 public class Place {
 
     private int id;
     private String name;
 
-    private PlaceStrategy strategy = BAG;
+    private PlaceType type;
+    private PlaceStrategy strategy;
 
     /**
      * <owner, tokens for this owner>
      */
-    private Map<IOwner, List<IToken>> initialTokens;
+    private Map<INode, List<IToken>> initialTokens;
 
     /**
      * <br>BAG : random sort the tokens.
@@ -30,12 +32,17 @@ public class Place {
         BAG, FIFO
     }
 
-    public Place() {
+    public enum PlaceType {
+        LOCAL, COMMUNICATING
+    }
+
+    private Place() {
+        type = LOCAL;
         strategy = BAG;
         initialTokens = new HashMap<>();
     }
 
-    public Place(int id) {
+    private Place(int id) {
         this();
         this.id = id;
     }
@@ -43,6 +50,12 @@ public class Place {
     public Place(int id, String name) {
         this(id);
         this.name = name;
+    }
+
+    public Place(int id, String name, PlaceType type) {
+        this(id);
+        this.name = name;
+        this.type = type;
     }
 
     public PlaceStrategy getPlaceStrategy() {
@@ -82,27 +95,34 @@ public class Place {
         this.name = name;
     }
 
-    public Map<IOwner, List<IToken>> getInitialTokens() {
+    public PlaceType getType() {
+        return type;
+    }
+
+    public void setType(PlaceType type) {
+        this.type = type;
+    }
+
+    public Map<INode, List<IToken>> getInitialTokens() {
         return initialTokens;
     }
 
-    public void setInitialTokens(Map<IOwner, List<IToken>> initialTokens) {
-        initialTokens.values().forEach(this::addInitTokens);
-        initialTokens.clear();
+    public void setInitialTokens(Map<INode, List<IToken>> initialTokens) {
+        this.initialTokens = initialTokens;
     }
 
-    public void addInitTokens(List<IToken> tokens) {
-        tokens.forEach(this::addInitToken);
+    public void addInitToken(INode owner, IToken token) {
+        addInitToken(null, owner, null, token);
     }
 
-    public void addInitToken(IToken token) {
-        IOwner owner = token.getOwner();
-        // 1) check whether the owner exists.
-        // 2) add the token into the owner's token list.
+    public void addInitToken(INode from, INode owner, INode to, IToken token) {
+        token.setFrom(from);
+        token.setOwner(owner);
+        token.setTo(to);
         initialTokens.computeIfAbsent(owner, obj -> new ArrayList<>()).add(token);
     }
 
-    public List<IToken> getTokensByOwner(IOwner owner) {
+    public List<IToken> getTokensByOwner(INode owner) {
         return initialTokens.get(owner);
     }
 }

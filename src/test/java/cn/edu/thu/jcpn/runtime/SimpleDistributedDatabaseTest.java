@@ -27,7 +27,7 @@ public class SimpleDistributedDatabaseTest {
     private static int SERVER_NUMBER = 2;
 
     private CPN cpn;
-    private List<IOwner> owners;
+    private List<INode> nodes;
     private RuntimeFoldingCPN instance;
 
     private GlobalClock globalClock = GlobalClock.getInstance();
@@ -67,35 +67,33 @@ public class SimpleDistributedDatabaseTest {
         transition2.addInPlace(place3).addInPlace(place4);
         transition2.addOutPlace(place4).addOutPlace(place2);
 
-        owners = IntStream.rangeClosed(1, SERVER_NUMBER).
-                mapToObj(x -> new StringOwner("server" + x)).collect(Collectors.toList());
+        nodes = IntStream.rangeClosed(1, SERVER_NUMBER).
+                mapToObj(x -> new StringNode("server" + x)).collect(Collectors.toList());
 
         //p1中保存每个服务器的一个token,用unitToken表示
-        owners.forEach(owner -> place1.addInitToken(new UnitToken(owner, LocalAsTarget.getInstance())));
+        nodes.forEach(node -> place1.addInitToken(node, new UnitToken()));
 
         //p3中保存消息
         //p4中保存每个服务器和别的服务器的套接字token,也用unitColor表示
-        owners.forEach(innerOwner -> owners.stream().filter(innerTarget -> !innerTarget.equals(innerOwner)).
-                forEach(innerTarget -> {
-                    place3.addInitToken(new MessageToken(innerOwner, innerTarget, 0));
-                    place4.addInitToken(new UnitToken(innerOwner, innerTarget));
+        nodes.forEach(owner -> nodes.stream().filter(to -> !to.equals(owner)).
+                forEach(to -> {
+                    place3.addInitToken(null, owner, to, new MessageToken(0));
+                    place4.addInitToken(null, owner, to, new UnitToken());
                 }));
 
         //t1,t2写output函数
         transition1.setOutputFunction(
                 inputToken -> {
                     OutputToken outputToken = new OutputToken();
-
                     MessageToken received = (MessageToken) inputToken.get(PID_2);
                     MessageToken toSend = new MessageToken(received.getMessage() + 1);
-                    toSend.setOwner(received.getOwner());
-                    toSend.setTarget(received.getTarget());
+                    toSend.setTo(received.getFrom());
                     toSend.setTime(globalClock.getTime() + 1);
-                    outputToken.addToken(toSend.getTarget(), PID_3, toSend);
+                    outputToken.addToken(received.getOwner(), PID_3, toSend);
 
                     IToken thread = inputToken.get(PID_1);
                     thread.setTime(globalClock.getTime() + 1);
-                    outputToken.addToken(LocalAsTarget.getInstance(), PID_1, thread);
+                    outputToken.addToken(thread.getOwner(), PID_1, thread);
 
                     return outputToken;
                 }
@@ -104,17 +102,15 @@ public class SimpleDistributedDatabaseTest {
         transition2.setOutputFunction(
                 inputToken -> {
                     OutputToken outputToken = new OutputToken();
-
                     MessageToken toSend = (MessageToken) inputToken.get(PID_3);
                     MessageToken received = new MessageToken(toSend.getMessage() + 1);
-                    received.setOwner(toSend.getOwner());
-                    received.setTarget(toSend.getTarget());
+                    received.setFrom(toSend.getOwner());
                     received.setTime(globalClock.getTime() + 1);
-                    outputToken.addToken(received.getTarget(), PID_2, received);
+                    outputToken.addToken(toSend.getTo(), PID_2, received);
 
                     IToken socket = inputToken.get(PID_4);
                     socket.setTime(globalClock.getTime() + 1);
-                    outputToken.addToken(LocalAsTarget.getInstance(), PID_4, socket);
+                    outputToken.addToken(socket.getOwner(), PID_4, socket);
 
                     return outputToken;
                 }
@@ -122,7 +118,7 @@ public class SimpleDistributedDatabaseTest {
 
         cpn.setPlaces(placeMap);
         cpn.setTransitions(transitionMap);
-        instance = new RuntimeFoldingCPN(cpn, owners);
+        instance = new RuntimeFoldingCPN(cpn, nodes);
     }
 
     @Test
@@ -135,9 +131,9 @@ public class SimpleDistributedDatabaseTest {
             instance.nextRound();
 
 //            if (count == 5) {
-//                IOwner owner = owners.get(0);
-//                ITarget target = owners.get(1);
-//                IToken token = new MessageToken(owner, target, 1000);
+//                IOwner owner = nodes.get(0);
+//                INode to = nodes.get(1);
+//                IToken token = new MessageToken(owner, to, 1000);
 //                List<IToken> tokens = new ArrayList<>();
 //                tokens.add(token);
 //                RuntimeIndividualCPN instanceIndividualCPN = instance.getIndividualCPN(owner, null);
