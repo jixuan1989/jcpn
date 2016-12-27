@@ -233,7 +233,6 @@ public class RuntimeTransition {
         for (Entry<INode, Map<Integer, List<IToken>>> toPidTokens : outputTokens.entrySet()) {
             INode to = toPidTokens.getKey();
 
-            long time = globalClock.getTime();
             for (Entry<Integer, List<IToken>> pidTokens : toPidTokens.getValue().entrySet()) {
                 int pid = pidTokens.getKey();
                 List<IToken> tokens = pidTokens.getValue();
@@ -241,13 +240,15 @@ public class RuntimeTransition {
                 RuntimePlace targetPlace = getOutPlace(to, pid);
                 targetPlace.addTokens(tokens);
 
-                time = tokens.get(0).getTime();
-            }
-            // register a event in the timeline.
-            if (owner.equals(to)) {
-                globalClock.addAbsoluteTimepointForRunning(owner, time);
-            } else {
-                globalClock.addAbsoluteTimepointForSending(to, time);
+                tokens.forEach(token -> {
+                    // register a event in the timeline.
+                    long time = token.getTime();
+                    if (owner.equals(to)) {
+                        globalClock.addAbsoluteTimepointForRunning(owner, time);
+                    } else {
+                        globalClock.addAbsoluteTimepointForSending(to, time);
+                    }
+                });
             }
         }
         return outputTokens;

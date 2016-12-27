@@ -88,11 +88,11 @@ public class SimpleDistributedDatabaseTest {
                     MessageToken received = (MessageToken) inputToken.get(PID_2);
                     MessageToken toSend = new MessageToken(received.getMessage() + 1);
                     toSend.setTo(received.getFrom());
-                    toSend.setTime(globalClock.getTime() + 1);
+                    toSend.setTimeCost(1);
                     outputToken.addToken(received.getOwner(), PID_3, toSend);
 
                     IToken thread = inputToken.get(PID_1);
-                    thread.setTime(globalClock.getTime() + 1);
+                    thread.setTimeCost(1);
                     outputToken.addToken(thread.getOwner(), PID_1, thread);
 
                     return outputToken;
@@ -105,11 +105,11 @@ public class SimpleDistributedDatabaseTest {
                     MessageToken toSend = (MessageToken) inputToken.get(PID_3);
                     MessageToken received = new MessageToken(toSend.getMessage() + 1);
                     received.setFrom(toSend.getOwner());
-                    received.setTime(globalClock.getTime() + 1);
+                    received.setTimeCost(1);
                     outputToken.addToken(toSend.getTo(), PID_2, received);
 
                     IToken socket = inputToken.get(PID_4);
-                    socket.setTime(globalClock.getTime() + 1);
+                    socket.setTimeCost(1);
                     outputToken.addToken(socket.getOwner(), PID_4, socket);
 
                     return outputToken;

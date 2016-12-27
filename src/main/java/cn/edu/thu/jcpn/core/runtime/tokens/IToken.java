@@ -1,5 +1,7 @@
 package cn.edu.thu.jcpn.core.runtime.tokens;
 
+import cn.edu.thu.jcpn.core.runtime.GlobalClock;
+
 /**
  * basic token interface, all tokens must implement this interface.
  *
@@ -12,6 +14,8 @@ public abstract class IToken {
     protected INode to;
 
     protected long time;
+
+    private static GlobalClock globalClock = GlobalClock.getInstance();
 
     protected IToken() {
     }
@@ -50,7 +54,11 @@ public abstract class IToken {
         return time;
     }
 
-    public void setTime(long time) {
-        this.time = time;
+//    public void setTime(long time) {
+//        this.time = time;
+//    }
+
+    public void setTimeCost(long timeCost) {
+        this.time = globalClock.getTime() + timeCost;
     }
 }
