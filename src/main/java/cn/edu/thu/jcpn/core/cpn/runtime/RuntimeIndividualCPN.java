@@ -81,6 +81,14 @@ public class RuntimeIndividualCPN {
         places.put(place.getId(), new RuntimePlace(owner, place));
     }
 
+    public IPlaceMonitor getPlaceMonitor(int pid) {
+        return placeMonitors.get(pid);
+    }
+
+    public ITransitionMonitor getTransitionMonitor(int tid) {
+        return transitionMonitors.get(tid);
+    }
+
     public void addMonitor(int pid, IPlaceMonitor monitor) {
         if (!places.containsKey(pid)) return;
 
@@ -176,19 +184,36 @@ public class RuntimeIndividualCPN {
         transitions.values().forEach(innerTransition -> innerTransition.removeTokenFromCache(inputToken));
         inputToken.forEach((pid, token) -> {
             places.get(pid).removeTokenFromTest(token);
-            reportWhenConsumed(places.get(pid), token, transition);
+            reportWhenTokenConsumed(places.get(pid), token, transition);
         });
         OutputToken outputToken = transition.firing(inputToken);
-
+        reportWhenTokensAdded(transition, outputToken);
         reportWhenFiring(transition, inputToken, outputToken);
         return outputToken;
     }
 
-    private void reportWhenConsumed(RuntimePlace place, IToken token, RuntimeTransition transition) {
+    private void reportWhenTokensAdded(RuntimeTransition transition, OutputToken outputToken) {
+        for (Map.Entry<INode, Map<Integer, List<IToken>>> toPidTokens : outputToken.entrySet()) {
+            INode to = toPidTokens.getKey();
+
+            for (Map.Entry<Integer, List<IToken>> pidTokens : toPidTokens.getValue().entrySet()) {
+                int pid = pidTokens.getKey();
+                List<IToken> tokens = pidTokens.getValue();
+                RuntimeIndividualCPN toCPN = foldingCPN.getIndividualCPN(to);
+                IPlaceMonitor monitor = toCPN.getPlaceMonitor(pid);
+                RuntimePlace toPlace = toCPN.getPlace(pid);
+                monitor.reportWhenTokensAdded(toCPN.getOwner(), toPlace.getId(), toPlace.getName(),
+                        tokens, owner, transition.getId(), transition.getName(), toPlace.getTestedTokens(),
+                        toPlace.getNewlyTokens(), toPlace.getFutureTokens());
+            }
+        }
+    }
+
+    private void reportWhenTokenConsumed(RuntimePlace place, IToken token, RuntimeTransition transition) {
         if (!placeMonitors.containsKey(place.getId())) return;
 
         IPlaceMonitor monitor = placeMonitors.get(place.getId());
-        monitor.reportWhenTokensConsumed(owner, place.getId(), place.getName(), token, transition.getId(), transition.getName(),
+        monitor.reportWhenTokenConsumed(owner, place.getId(), place.getName(), token, transition.getId(), transition.getName(),
                 place.getTestedTokens(), place.getNewlyTokens(), place.getFutureTokens());
     }
 

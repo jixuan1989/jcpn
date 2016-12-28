@@ -10,9 +10,9 @@ import java.util.Collection;
  */
 public interface IPlaceMonitor {
 
-    void reportWhenTokensConsumed(INode owner, int placeId, String placeName, IToken consumed, int transitionId, String transitionName,
-                                  Collection<IToken> tested, Collection<IToken> newly, Collection<IToken> future);
+    void reportWhenTokenConsumed(INode owner, int placeId, String placeName, IToken consumed, int transitionId, String transitionName,
+                                 Collection<IToken> tested, Collection<IToken> newly, Collection<IToken> future);
 
-    void reportWhenTokensAdded(INode owner, int placeId, String placeName, Collection<IToken> newTokens, int transitionId, String transitionName,
+    void reportWhenTokensAdded(INode owner, int placeId, String placeName, Collection<IToken> newTokens, INode from, int transitionId, String transitionName,
                                Collection<IToken> tested, Collection<IToken> newly, Collection<IToken> future);
 }

@@ -8,6 +8,7 @@ import cn.edu.thu.jcpn.core.place.runtime.RuntimePlace;
 import cn.edu.thu.jcpn.core.runtime.GlobalClock;
 import cn.edu.thu.jcpn.core.runtime.tokens.IToken;
 import cn.edu.thu.jcpn.core.transition.Transition;
+import cn.edu.thu.jcpn.core.transition.Transition.TransitionType;
 import cn.edu.thu.jcpn.core.transition.condition.Condition;
 import cn.edu.thu.jcpn.core.transition.condition.InputToken;
 import cn.edu.thu.jcpn.core.transition.condition.OutputToken;
@@ -28,63 +29,66 @@ import java.util.stream.Collectors;
  */
 public class RuntimeTransition {
 
+    private INode owner;
     private int id;
     private String name;
-    private INode owner;
     private int priority = 500;
+    private TransitionType type;
 
+    private Condition condition;
+    private Function<InputToken, OutputToken> outputFunction;
+
+    private Map<Integer, Integer> inPidPriorities;
     private Map<Integer, RuntimePlace> inPlaces;
 
     // <to, <pid, place>>
     private Map<INode, Map<Integer, RuntimePlace>> outPlaces;
 
-    private Condition condition;
-    private Function<InputToken, OutputToken> outputFunction;
-
     private Map<PlacePartition, List<InputToken>> cache;
-
-    private GlobalClock globalClock;
 
     /**
      * Only use for fetch the place of tokens' targets.
      */
     private RuntimeFoldingCPN foldingCPN;
 
+    private GlobalClock globalClock;
+
     public RuntimeTransition(INode owner, Map<Integer, RuntimePlace> runtimePlaces,
                              Transition transition, RuntimeFoldingCPN foldingCPN) {
-
+        this.owner = owner;
         this.id = transition.getId();
         this.name = transition.getName();
-        this.owner = owner;
+        this.priority = transition.getPriority();
+        this.type = transition.getType();
 
+        this.condition = transition.getCondition();
+        this.outputFunction = transition.getOutputFunction();
+
+        this.inPidPriorities = transition.getInPidPriorities();
+        this.inPlaces = new HashMap<>();
+        this.outPlaces = new HashMap<>();
         initInPlaces(transition.getInPlaces(), runtimePlaces);
-        outPlaces = new HashMap<>();
-
-        condition = transition.getCondition();
-        outputFunction = transition.getOutputFunction();
-
         initCache();
 
-        globalClock = GlobalClock.getInstance();
-
         this.foldingCPN = foldingCPN;
+
+        this.globalClock = GlobalClock.getInstance();
     }
 
-    private void initInPlaces(Set<Place> places, Map<Integer, RuntimePlace> runtimePlaces) {
-        inPlaces = new HashMap<>();
-        places.forEach(place -> {
-            RuntimePlace inRuntimePlace = runtimePlaces.get(place.getId());
-            inPlaces.put(inRuntimePlace.getId(), inRuntimePlace);
-        });
+    private void initInPlaces(Map<Integer, Place> places, Map<Integer, RuntimePlace> runtimePlaces) {
+        places.keySet().forEach(pid -> this.inPlaces.put(pid, runtimePlaces.get(pid)));
     }
 
     private void initCache() {
         cache = new HashMap<>();
-        condition.getPlacePartition().forEach(partition -> cache.put(partition, new ArrayList<>()));
+        Collection<PlacePartition> partitions = condition.getPlacePartition();
+        partitions.forEach(partition -> partition.setPriorities(inPidPriorities));
+        partitions.forEach(partition -> cache.put(partition, new ArrayList<>()));
         PlacePartition freePartition = getFreePartition();
         freePartition.forEach(pid -> {
             PlacePartition partition = new PlacePartition();
             partition.add(pid);
+            partition.setPriorities(inPidPriorities);
             cache.put(partition, new ArrayList<>());
         });
     }
@@ -99,64 +103,32 @@ public class RuntimeTransition {
         return id;
     }
 
-    public void setId(int id) {
-        this.id = id;
-    }
-
     public String getName() {
         return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
     }
 
     public INode getOwner() {
         return owner;
     }
 
-    public void setOwner(INode owner) {
-        this.owner = owner;
-    }
-
     public int getPriority() {
         return priority;
-    }
-
-    public void setPriority(int priority) {
-        this.priority = priority;
     }
 
     public Condition getCondition() {
         return condition;
     }
 
-    public void setCondition(Condition condition) {
-        this.condition = condition;
-    }
-
     public Map<Integer, RuntimePlace> getInPlaces() {
         return inPlaces;
-    }
-
-    public void setInPlaces(Map<Integer, RuntimePlace> inPlaces) {
-        this.inPlaces = inPlaces;
     }
 
     public Map<INode, Map<Integer, RuntimePlace>> getOutPlaces() {
         return outPlaces;
     }
 
-    public void setOutPlaces(Map<INode, Map<Integer, RuntimePlace>> outPlaces) {
-        this.outPlaces = outPlaces;
-    }
-
     public Function<InputToken, OutputToken> getOutputFunction() {
         return outputFunction;
-    }
-
-    public void setOutputFunction(Function<InputToken, OutputToken> outputFunction) {
-        this.outputFunction = outputFunction;
     }
 
     /**
@@ -228,18 +200,17 @@ public class RuntimeTransition {
      */
     public OutputToken firing(InputToken inputTokens) {
         if (outputFunction == null) return null;
-        OutputToken outputTokens = this.outputFunction.apply(inputTokens);
+        OutputToken outputToken = this.outputFunction.apply(inputTokens);
 
-        for (Entry<INode, Map<Integer, List<IToken>>> toPidTokens : outputTokens.entrySet()) {
+        for (Entry<INode, Map<Integer, List<IToken>>> toPidTokens : outputToken.entrySet()) {
             INode to = toPidTokens.getKey();
 
             for (Entry<Integer, List<IToken>> pidTokens : toPidTokens.getValue().entrySet()) {
                 int pid = pidTokens.getKey();
                 List<IToken> tokens = pidTokens.getValue();
                 tokens.forEach(token -> token.setOwner(to));
-                RuntimePlace targetPlace = getOutPlace(to, pid);
-                targetPlace.addTokens(tokens);
-                //TODO call reprotWhenTokensGenerated()
+                RuntimePlace toPlace = getOutPlace(to, pid);
+                toPlace.addTokens(tokens);
 
                 tokens.forEach(token -> {
                     // register a event in the timeline.
@@ -252,7 +223,7 @@ public class RuntimeTransition {
                 });
             }
         }
-        return outputTokens;
+        return outputToken;
     }
 
     private RuntimePlace getOutPlace(INode to, int pid) {

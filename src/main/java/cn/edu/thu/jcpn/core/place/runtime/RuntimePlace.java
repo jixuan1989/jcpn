@@ -50,24 +50,12 @@ public class RuntimePlace {
         return id;
     }
 
-    public void setId(int id) {
-        this.id = id;
-    }
-
     public String getName() {
         return name;
     }
 
-    public void setName(String name) {
-        this.name = name;
-    }
-
     public PlaceStrategy getPlaceStrategy() {
         return placeStrategy;
-    }
-
-    public void setPlaceStrategy(PlaceStrategy placeStrategy) {
-        this.placeStrategy = placeStrategy;
     }
 
     public INode getOwner() {
@@ -82,24 +70,12 @@ public class RuntimePlace {
         return newlyTokens;
     }
 
-    public void setNewlyTokens(List<IToken> newlyTokens) {
-        this.newlyTokens = newlyTokens;
-    }
-
     public List<IToken> getTestedTokens() {
         return testedTokens;
     }
 
-    public void setTestedTokens(List<IToken> testedTokens) {
-        this.testedTokens = testedTokens;
-    }
-
     public List<IToken> getFutureTokens() {
         return futureTokens;
-    }
-
-    public void setFutureTokens(List<IToken> futureTokens) {
-        this.futureTokens = futureTokens;
     }
 
     public void addTokens(List<IToken> tokens) {

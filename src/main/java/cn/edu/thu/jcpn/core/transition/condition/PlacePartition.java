@@ -12,8 +12,21 @@ import java.util.*;
  */
 public class PlacePartition extends TreeSet<Integer> {
 
+    /**
+     * pids is a copy of the data order by priorities of the places in these partition.
+     */
+    private List<Integer> pids = new ArrayList<>();
+
     public List<Integer> getPids() {
-        return new ArrayList<>(this);
+        return pids;
+    }
+
+    public void setPriorities(Map<Integer, Integer> priorities) {
+        Map<Integer, List<Integer>> priorityPids = new TreeMap<>();
+        this.forEach(pid ->
+                priorityPids.computeIfAbsent(priorities.get(pid), obj -> new ArrayList<>()).add(pid));
+
+        priorityPids.values().forEach(pids::addAll);
     }
 
     public PlacePartition clone() {
@@ -39,21 +52,4 @@ public class PlacePartition extends TreeSet<Integer> {
         places.forEach(place -> res.add(place.getId()));
         return res;
     }
-
-//    @Override
-//    public boolean equals(Object otherPartition) {
-//        if (otherPartition instanceof PlacePartition) {
-//            return this.equals((PlacePartition) otherPartition);
-//        }
-//        return false;
-//    }
-//
-//    public boolean equals(PlacePartition otherPartition) {
-//        if (this.size() != otherPartition.size()) return false;
-//
-//        long size = this.size();
-//        long thisContainOhter = this.stream().filter(this::contains).count();
-//        long otherContainThis = this.stream().filter(otherPartition::contains).count();
-//        return size == thisContainOhter && size == otherContainThis;
-//    }
 }

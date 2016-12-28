@@ -23,44 +23,32 @@ public class RuntimeLookupTable {
         this.name = lookupTable.getName();
 
         this.properties = lookupTable.getPropertiesByOwner(this.owner);
+        if (null == properties) properties = new HashMap<>();
     }
 
     public Integer getId() {
         return id;
     }
 
-    public void setId(int id) {
-        this.id = id;
-    }
-
     public String getName() {
         return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
     }
 
     public INode getOwner() {
         return owner;
     }
 
-    public void setOwner(INode owner) {
-        this.owner = owner;
-    }
-
     public Map<String, String> getProperties() {
         return properties;
     }
 
-    public void setProperties(Map<String, String> properties) {
-        this.properties = properties;
+    public RuntimeLookupTable addProperties(Map<String, String> properties) {
+        this.properties.putAll(properties);
+        return this;
     }
 
     public RuntimeLookupTable addProperty(String key, String value) {
-        if (null == properties) properties = new HashMap<>();
-
-        properties.put(key, value);
+        this.properties.put(key, value);
         return this;
     }
 

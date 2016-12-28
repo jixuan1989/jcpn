@@ -16,14 +16,18 @@ public class Transition {
 
     private int id;
     private String name;
+    private int priority = 500;
     private TransitionType type;
 
     private Condition condition;
-
-    private Set<Place> inPlaces;
-    private Set<Place> outPlaces;
-
     private Function<InputToken, OutputToken> outputFunction;
+
+    /**
+     * priorities for input places.
+     */
+    private Map<Integer, Integer> inPidPriorities;
+    private Map<Integer, Place> inPlaces;
+    private Map<Integer, Place> outPlaces;
 
     public enum TransitionType {
         LOCAL, TRANSMIT
@@ -37,44 +41,58 @@ public class Transition {
         this();
         this.id = id;
         this.name = name;
-        inPlaces = new HashSet<>();
-        outPlaces = new HashSet<>();
+        inPidPriorities = new HashMap<>();
+        inPlaces = new HashMap<>();
+        outPlaces = new HashMap<>();
         condition = new Condition();
     }
 
     public Transition(int id, String name, TransitionType type) {
-        this();
-        this.id = id;
-        this.name = name;
+        this(id, name);
         this.type = type;
-        inPlaces = new HashSet<>();
-        outPlaces = new HashSet<>();
-        condition = new Condition();
     }
 
-    public Set<Place> getInPlaces() {
+    public Transition(int id, String name, TransitionType type, int priority) {
+        this(id, name, type);
+        this.priority = priority;
+    }
+
+    public Map<Integer, Integer> getInPidPriorities() {
+        return inPidPriorities;
+    }
+
+    public void setInPidPriorities(Map<Integer, Integer> inPidPriorities) {
+        this.inPidPriorities = inPidPriorities;
+    }
+
+    public Map<Integer, Place> getInPlaces() {
         return inPlaces;
     }
 
-    public void setInPlaces(Set<Place> inPlaces) {
+    public void setInPlaces(Map<Integer, Place> inPlaces) {
         this.inPlaces = inPlaces;
     }
 
     public Transition addInPlace(Place place) {
-        inPlaces.add(place);
+        return addInPlace(place, 500);
+    }
+
+    public Transition addInPlace(Place place, int priority) {
+        inPlaces.put(place.getId(), place);
+        inPidPriorities.put(place.getId(), priority);
         return this;
     }
 
-    public Set<Place> getOutPlaces() {
+    public Map<Integer, Place> getOutPlaces() {
         return outPlaces;
     }
 
-    public void setOutPlaces(Set<Place> outPlaces) {
+    public void setOutPlaces(Map<Integer, Place> outPlaces) {
         this.outPlaces = outPlaces;
     }
 
     public Transition addOutPlace(Place place) {
-        outPlaces.add(place);
+        outPlaces.put(place.getId(), place);
         return this;
     }
 
@@ -100,6 +118,14 @@ public class Transition {
 
     public void setType(TransitionType type) {
         this.type = type;
+    }
+
+    public int getPriority() {
+        return priority;
+    }
+
+    public void setPriority(int priority) {
+        this.priority = priority;
     }
 
     /**

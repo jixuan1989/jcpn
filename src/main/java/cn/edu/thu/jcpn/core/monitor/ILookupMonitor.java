@@ -10,9 +10,11 @@ import java.util.Collection;
  */
 public interface ILookupMonitor {
 
-    void reportWhenTokensConsumed(INode owner, int placeId, String placeName, IToken consumed, int transitionId, String transitionName,
-                                  Collection<IToken> tested, Collection<IToken> newly, Collection<IToken> future);
+    void reportWhenProperityRead(INode owner, int lookupTableId, String lookupTableName, String key, String value, int transitionId, String transitionName);
 
-    void reportWhenTokensAdded(INode owner, int placeId, String placeName, Collection<IToken> newTokens, int transitionId, String transitionName,
-                               Collection<IToken> tested, Collection<IToken> newly, Collection<IToken> future);
+    void reportWhenProperityAdded(INode owner, int lookupTableId, String lookupTableName, String key, String value, int transitionId, String transitionName);
+
+    void reportWhenProperityUpdated(INode owner, int lookupTableId, String lookupTableName, String key, String value, int transitionId, String transitionName);
+
+    void reportWhenProperityRemoved(INode owner, int lookupTableId, String lookupTableName, String key, String value, int transitionId, String transitionName);
 }

@@ -76,11 +76,11 @@ public class SimpleDistributedDatabaseTest {
         //p1中保存每个服务器的一个token,用unitToken表示
         nodes.forEach(node -> place1.addInitToken(node, new UnitToken()));
 
+        place3.addInitToken(null, nodes.get(0), nodes.get(1), new MessageToken(0));
         //p3中保存消息
         //p4中保存每个服务器和别的服务器的套接字token,也用unitColor表示
         nodes.forEach(owner -> nodes.stream().filter(to -> !to.equals(owner)).
                 forEach(to -> {
-                    place3.addInitToken(null, owner, to, new MessageToken(0));
                     place4.addInitToken(null, owner, to, new UnitToken());
                 }));
 
@@ -122,13 +122,14 @@ public class SimpleDistributedDatabaseTest {
         cpn.setPlaces(placeMap);
         cpn.setTransitions(transitionMap);
         instance = new RuntimeFoldingCPN(cpn, nodes);
-        IPlaceMonitor placeMonitor=new IPlaceMonitor() {
+        IPlaceMonitor placeMonitor = new IPlaceMonitor() {
             @Override
-            public void reportWhenTokensConsumed(INode owner, int placeId, String placeName, IToken consumed, int transitionId, String transitionName, Collection<IToken> tested, Collection<IToken> newly, Collection<IToken> future) {
+            public void reportWhenTokenConsumed(INode owner, int placeId, String placeName, IToken consumed, int transitionId, String transitionName, Collection<IToken> tested, Collection<IToken> newly, Collection<IToken> future) {
             }
 
             @Override
-            public void reportWhenTokensAdded(INode owner, int placeId, String placeName, IToken consumed, int transitionId, String transitionName, Collection<IToken> tested, Collection<IToken> newly, Collection<IToken> future) {
+            public void reportWhenTokensAdded(INode owner, int placeId, String placeName, Collection<IToken> newTokens, INode from, int transitionId, String transitionName, Collection<IToken> tested, Collection<IToken> newly, Collection<IToken> future) {
+
             }
         };
         instance.addMonitor(PID_1, placeMonitor);
@@ -136,12 +137,7 @@ public class SimpleDistributedDatabaseTest {
         instance.addMonitor(PID_3, placeMonitor);
         instance.addMonitor(PID_4, placeMonitor);
 
-        ITransitionMonitor transitionMonitor=new ITransitionMonitor() {
-            @Override
-            public void reportWhenFiring(INode owner, int transitionId, String transitionName, InputToken inputToken, OutputToken outputToken) {
-                System.out.println( owner + "'s " + transitionName + " is fired");
-            }
-        };
+        ITransitionMonitor transitionMonitor = (owner, transitionId, transitionName, inputToken, outputToken) -> System.out.println( owner + "'s " + transitionName + " is fired");
         instance.addMonitor(transition1.getId(),transitionMonitor);
         instance.addMonitor(transition2.getId(),transitionMonitor);
     }
