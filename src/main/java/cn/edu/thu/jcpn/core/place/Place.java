@@ -33,7 +33,7 @@ public class Place {
     }
 
     public enum PlaceType {
-        LOCAL, COMMUNICATING
+        LOCAL, COMMUNICATING, CONSUMELESS
     }
 
     private Place() {
@@ -63,20 +63,7 @@ public class Place {
     }
 
     public void setPlaceStrategy(PlaceStrategy strategy) {
-        if (this.strategy != strategy) {
-            resetStrategy(strategy);
-        }
         this.strategy = strategy;
-    }
-
-    private void resetStrategy(PlaceStrategy strategy) {
-        //TODO firstly, we only support BAG.
-        if (strategy == FIFO) {
-
-        }
-        else {
-
-        }
     }
 
     public int getId() {

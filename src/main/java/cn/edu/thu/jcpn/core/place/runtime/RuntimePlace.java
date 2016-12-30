@@ -10,12 +10,15 @@ import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.stream.Collectors;
 
+import static cn.edu.thu.jcpn.core.place.Place.PlaceType.CONSUMELESS;
+
 public class RuntimePlace {
 
     private int id;
     private String name;
     protected INode owner;
 
+    private PlaceType type;
     private PlaceStrategy placeStrategy;
 
     /**
@@ -36,6 +39,7 @@ public class RuntimePlace {
         this.owner = owner;
         this.id = place.getId();
         this.name = place.getName();
+        this.type = place.getType();
         this.placeStrategy = place.getPlaceStrategy();
 
         this.newlyTokens = new ArrayList<>();
@@ -89,8 +93,7 @@ public class RuntimePlace {
 
         if (this.getPlaceStrategy().equals(PlaceStrategy.BAG)) {
             addTokenBAG(token);
-        }
-        else {
+        } else {
             addTokenFIFO(token);
         }
     }
@@ -99,8 +102,7 @@ public class RuntimePlace {
         if (token.getTime() > globalClock.getTime()) {
             int position = random.nextInt(futureTokens.size() + 1);
             futureTokens.add(position, token);
-        }
-        else {
+        } else {
             int position = random.nextInt(newlyTokens.size() + 1);
             newlyTokens.add(position, token);
         }
@@ -109,8 +111,7 @@ public class RuntimePlace {
     private void addTokenFIFO(IToken token) {
         if (token.getTime() > globalClock.getTime()) {
             addTokenByTimeOrder(futureTokens, token);
-        }
-        else {
+        } else {
             addTokenByTimeOrder(newlyTokens, token);
         }
     }
@@ -122,7 +123,7 @@ public class RuntimePlace {
      * Use a binary-search algorithm here.
      *
      * @param tokens existing tokens
-     * @param token new token that to be added
+     * @param token  new token that to be added
      */
     protected void addTokenByTimeOrder(List<IToken> tokens, IToken token) {
         int start = 0;
@@ -131,8 +132,7 @@ public class RuntimePlace {
             int mid = start + (end - start) / 2;
             if (tokens.get(mid).getTime() < token.getTime()) {
                 start = mid;
-            }
-            else { // tokens[mid].time >= token.time.
+            } else { // tokens[mid].time >= token.time.
                 end = mid;
             }
         }
@@ -140,12 +140,10 @@ public class RuntimePlace {
         if (tokens.get(start).getTime() > token.getTime()) {
             tokens.add(start, token); // add(0, token);
             return;
-        }
-        else if (tokens.get(end).getTime() < token.getTime()) {
+        } else if (tokens.get(end).getTime() < token.getTime()) {
             tokens.add(end + 1, token); // add(tokens.length, token);
             return;
-        }
-        else if (tokens.get(start).getTime() < token.getTime() &&
+        } else if (tokens.get(start).getTime() < token.getTime() &&
                 tokens.get(end).getTime() > token.getTime()) {
             tokens.add(end, token);
             return;
@@ -159,8 +157,7 @@ public class RuntimePlace {
             int mid = start + (end - start) / 2;
             if (tokens.get(mid).getTime() <= token.getTime()) {
                 start = mid;
-            }
-            else { // tokens[mid].time > token.time.
+            } else { // tokens[mid].time > token.time.
                 end = mid;
             }
         }
@@ -181,8 +178,9 @@ public class RuntimePlace {
     /**
      * check whether newly tokens is empty.
      * This method will check all the future tokens, and reassign tokens into newly or future queues, by comparing with global clock.
+     *
      * @return true if after reassigning, newly tokens is not empty;
-     *         false, otherwise.
+     * false, otherwise.
      */
     public boolean hasNewlyTokens() {
         List<IToken> timeUp = futureTokens.stream().
@@ -194,6 +192,8 @@ public class RuntimePlace {
     }
 
     public boolean removeTokenFromTest(IToken token) {
+        if (type == CONSUMELESS) return true;
+
         return testedTokens.remove(token);
     }
 

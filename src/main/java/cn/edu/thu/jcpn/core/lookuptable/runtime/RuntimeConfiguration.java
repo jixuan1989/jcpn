@@ -1,6 +1,6 @@
 package cn.edu.thu.jcpn.core.lookuptable.runtime;
 
-import cn.edu.thu.jcpn.core.lookuptable.LookupTable;
+import cn.edu.thu.jcpn.core.lookuptable.Configuration;
 import cn.edu.thu.jcpn.core.runtime.tokens.INode;
 
 import java.util.HashMap;
@@ -9,7 +9,7 @@ import java.util.Map;
 /**
  * Created by leven on 2016/12/24.
  */
-public class RuntimeLookupTable {
+public class RuntimeConfiguration {
 
     private int id;
     private String name;
@@ -17,7 +17,7 @@ public class RuntimeLookupTable {
 
     private Map<String, String> properties;
 
-    public RuntimeLookupTable(INode owner, LookupTable lookupTable) {
+    public RuntimeConfiguration(INode owner, Configuration lookupTable) {
         this.owner = owner;
         this.id = lookupTable.getId();
         this.name = lookupTable.getName();
@@ -42,17 +42,17 @@ public class RuntimeLookupTable {
         return properties;
     }
 
-    public RuntimeLookupTable addProperties(Map<String, String> properties) {
+    public RuntimeConfiguration addProperties(Map<String, String> properties) {
         this.properties.putAll(properties);
         return this;
     }
 
-    public RuntimeLookupTable addProperty(String key, String value) {
+    public RuntimeConfiguration addProperty(String key, String value) {
         this.properties.put(key, value);
         return this;
     }
 
-    public RuntimeLookupTable updateProperty(String key, String value) {
+    public RuntimeConfiguration updateProperty(String key, String value) {
         this.addProperty(key, value);
         return this;
     }

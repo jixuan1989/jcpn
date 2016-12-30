@@ -8,7 +8,7 @@ import java.util.Map;
 /**
  * Created by leven on 2016/12/23.
  */
-public class LookupTable {
+public class Configuration {
 
     private int id;
     private String name;
@@ -18,16 +18,16 @@ public class LookupTable {
      */
     private Map<INode, Map<String, String>> initProperties;
 
-    public LookupTable() {
+    public Configuration() {
         initProperties = new HashMap<>();
     }
 
-    public LookupTable(int id) {
+    public Configuration(int id) {
         this();
         this.id = id;
     }
 
-    public LookupTable(int id, String name) {
+    public Configuration(int id, String name) {
         this(id);
         this.name = name;
     }
@@ -64,7 +64,7 @@ public class LookupTable {
         initProperties.keySet().forEach(owner -> addInitProperty(owner, key, value));
     }
 
-    public LookupTable addInitProperty(INode owner, String key, String value) {
+    public Configuration addInitProperty(INode owner, String key, String value) {
         initProperties.computeIfAbsent(owner, obj -> new HashMap<>()).put(key, value);
         return this;
     }

@@ -16,6 +16,7 @@ import org.apache.logging.log4j.Logger;
 
 import java.util.*;
 
+import static cn.edu.thu.jcpn.core.cpn.runtime.RuntimeIndividualCPN.TokenType.*;
 import static java.util.stream.Collectors.groupingBy;
 
 public class RuntimeIndividualCPN {
@@ -205,6 +206,10 @@ public class RuntimeIndividualCPN {
                 monitor.reportWhenTokensAdded(toCPN.getOwner(), toPlace.getId(), toPlace.getName(),
                         tokens, owner, transition.getId(), transition.getName(), toPlace.getTestedTokens(),
                         toPlace.getNewlyTokens(), toPlace.getFutureTokens());
+
+                Map<TokenType, Map<INode, Collection<IToken>>> pidAllTokens = getPidAllTokens(pid);
+                monitor.reportWhenTokensAdded(owner, toPlace.getId(), toPlace.getName(), tokens, transition.getId(),
+                        transition.getName(), pidAllTokens.get(TESTED), pidAllTokens.get(NEWLY), pidAllTokens.get(FUTURE));
             }
         }
     }
@@ -215,6 +220,10 @@ public class RuntimeIndividualCPN {
         IPlaceMonitor monitor = placeMonitors.get(place.getId());
         monitor.reportWhenTokenConsumed(owner, place.getId(), place.getName(), token, transition.getId(), transition.getName(),
                 place.getTestedTokens(), place.getNewlyTokens(), place.getFutureTokens());
+
+        Map<TokenType, Map<INode, Collection<IToken>>> pidAllTokens = getPidAllTokens(place.getId());
+        monitor.reportWhenTokenConsumed(owner, place.getId(), place.getName(), token, transition.getId(), transition.getName(),
+                pidAllTokens.get(TESTED), pidAllTokens.get(NEWLY), pidAllTokens.get(FUTURE));
     }
 
     private void reportWhenFiring(RuntimeTransition transition, InputToken inputToken, OutputToken outputToken) {
@@ -222,6 +231,27 @@ public class RuntimeIndividualCPN {
 
         ITransitionMonitor monitor = transitionMonitors.get(transition.getId());
         monitor.reportWhenFiring(owner, transition.getId(), transition.getName(), inputToken, outputToken);
+    }
+
+    private Map<TokenType, Map<INode, Collection<IToken>>> getPidAllTokens(int pid) {
+        Map<TokenType, Map<INode, Collection<IToken>>> res = new HashMap<>();
+        Map<INode, Collection<IToken>> tested = new HashMap<>();
+        Map<INode, Collection<IToken>> newly = new HashMap<>();
+        Map<INode, Collection<IToken>> future = new HashMap<>();
+        foldingCPN.getOwners().forEach(owner -> {
+            RuntimePlace runtimePlace = foldingCPN.getIndividualCPN(owner).getPlace(pid);
+            tested.put(owner, runtimePlace.getTestedTokens());
+            newly.put(owner, runtimePlace.getNewlyTokens());
+            future.put(owner, runtimePlace.getFutureTokens());
+        });
+        res.put(TESTED, tested);
+        res.put(NEWLY, newly);
+        res.put(FUTURE, future);
+        return res;
+    }
+
+    protected enum TokenType {
+        TESTED, NEWLY, FUTURE
     }
 
     @Override

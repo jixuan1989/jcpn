@@ -2,7 +2,7 @@ package cn.edu.thu.jcpn.runtime;
 
 import cn.edu.thu.jcpn.core.cpn.CPN;
 import cn.edu.thu.jcpn.core.cpn.runtime.RuntimeFoldingCPN;
-import cn.edu.thu.jcpn.core.lookuptable.LookupTable;
+import cn.edu.thu.jcpn.core.lookuptable.Configuration;
 import cn.edu.thu.jcpn.core.place.Place;
 import cn.edu.thu.jcpn.core.place.Place.PlaceType;
 import cn.edu.thu.jcpn.core.runtime.GlobalClock;
@@ -51,7 +51,7 @@ public class CassandraWriterTest {
 
         Place place2 = new Place(2, "alive servers", PlaceType.LOCAL);
 
-        LookupTable lookupTable3 = new LookupTable(3, "lookup table");
+        Configuration lookupTable3 = new Configuration(3, "lookup table");
 
         Place place4 = new Place(4, "write resources");
         Place place5 = new Place(5, "response resources");
