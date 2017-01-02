@@ -77,10 +77,6 @@ public class Transition {
         return inPlaces;
     }
 
-    public void setInPlaces(Map<Integer, Place> inPlaces) {
-        this.inPlaces = inPlaces;
-    }
-
     public Transition addInPlace(Place place) {
         return addInPlace(place, 500);
     }
@@ -93,10 +89,6 @@ public class Transition {
 
     public Map<Integer, Place> getOutPlaces() {
         return outPlaces;
-    }
-
-    public void setOutPlaces(Map<Integer, Place> outPlaces) {
-        this.outPlaces = outPlaces;
     }
 
     public Transition addOutPlace(Place place) {

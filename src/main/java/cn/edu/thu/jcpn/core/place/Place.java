@@ -98,6 +98,10 @@ public class Place {
         this.initialTokens = initialTokens;
     }
 
+    public void addInitTokens(INode owner, List<IToken> tokens) {
+        tokens.forEach(token -> addInitToken(null, owner, null, token));
+    }
+
     public void addInitToken(INode owner, IToken token) {
         addInitToken(null, owner, null, token);
     }
