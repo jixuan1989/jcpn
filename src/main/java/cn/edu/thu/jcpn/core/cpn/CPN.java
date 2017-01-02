@@ -41,8 +41,14 @@ public class CPN {
         return places.get(placeId);
     }
 
-    public void addPlace(int id, Place place) {
-        places.put(id, place);
+    public void addPlace(Place place) {
+        places.put(place.getId(), place);
+    }
+
+    public void addPlaces(Place... places) {
+        for(Place place : places){
+            this.places.put(place.getId(),place);
+        }
     }
 
     public Place removePlace(int id) {
@@ -57,8 +63,14 @@ public class CPN {
         this.transitions = transitions;
     }
 
-    public void addTransition(int id, Transition transition) {
-        transitions.put(id, transition);
+    public void addTransition(Transition transition) {
+        transitions.put(transition.getId(), transition);
+    }
+
+    public void addTransitions(Transition... transitions) {
+        for(Transition transition : transitions){
+            this.transitions.put(transition.getId(),transition);
+        }
     }
 
     public Transition removeTransition(int id) {

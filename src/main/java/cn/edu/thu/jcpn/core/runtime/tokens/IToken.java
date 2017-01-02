@@ -10,7 +10,12 @@ import cn.edu.thu.jcpn.core.runtime.GlobalClock;
 public abstract class IToken {
 
     protected INode from;
+
     protected INode owner;
+
+    /**
+     * If the token is stored in a place whose type is COMMUNICATING, then it can not be null.
+     */
     protected INode to;
 
     protected long time;

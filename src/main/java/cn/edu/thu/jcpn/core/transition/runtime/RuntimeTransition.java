@@ -21,11 +21,10 @@ import java.util.stream.Collectors;
 
 /**
  * Transition is the minimum unit to execute an event. Firstly, the individualCPN calls the
- * hasEnableTransitions method of its transition to get the transition who can execute. Then the CPN random
- * pick one transition to prepare to execute through call the specific transition's getRandmonInputToken
- * and get the inputToken from the transition' cache. Then, use the inputToken the make the transition
- * firing. After that, use the inputToken to clean the relative tokens in all relative transition' caches,
- * and the original place.
+ * hasEnableTransitions method to get the transitions who can be executed. Then the CPN randomly
+ * picks one transition to prepare to execute it through calling the transition's getRandmonInputToken,
+ * and gets the inputToken from the transition's cache. Then, the inputToken is used to fire the transition.
+ * After that, the relative input tokens are removed from all relative transitions' caches and the original places.
  */
 public class RuntimeTransition {
 
@@ -39,6 +38,7 @@ public class RuntimeTransition {
     private Function<InputToken, OutputToken> outputFunction;
 
     private Map<Integer, Integer> inPidPriorities;
+
     private Map<Integer, RuntimePlace> inPlaces;
 
     // <to, <pid, place>>

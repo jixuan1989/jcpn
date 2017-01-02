@@ -12,6 +12,9 @@ import java.util.function.Predicate;
 
 import static cn.edu.thu.jcpn.core.transition.Transition.TransitionType.LOCAL;
 
+/**
+ * Transition has two type: local and transmit. The default type is LOCAL.
+ */
 public class Transition {
 
     private int id;
@@ -23,7 +26,12 @@ public class Transition {
     private Function<InputToken, OutputToken> outputFunction;
 
     /**
-     * priorities for input places.
+     * The tokens in some places obey FIFO.
+     * If two places have FIFO stragety and both them are input places, we are not sure which one  is the first-class citizen.
+     * <br>
+     * For example, place p1 has tokens  [t1, t2] (t1 is in the head of the queue); and place p2 has tokens [t3, t4].
+     * If all the compositions are: (t1, t4) and (t2, t3) which satisfy the condition in the transition, it is obvious
+     * that both of them violate the FIFO strategy. Therefore, we have to define whose FIFO is more important to break the deadlock.
      */
     private Map<Integer, Integer> inPidPriorities;
     private Map<Integer, Place> inPlaces;
