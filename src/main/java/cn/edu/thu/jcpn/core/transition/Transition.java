@@ -23,7 +23,7 @@ public class Transition {
     private TransitionType type;
 
     private Condition condition;
-    private Function<InputToken, OutputToken> outputFunction;
+    private Function<InputToken, OutputToken> transferFunction;
 
     /**
      * The tokens in some places obey FIFO.
@@ -129,14 +129,14 @@ public class Transition {
     }
 
     /**
-     * @param outputFunction notice the time cost is relative time rather than absolute time
+     * @param transferFunction notice the time cost is relative time rather than absolute time
      */
-    public void setOutputFunction(Function<InputToken, OutputToken> outputFunction) {
-        this.outputFunction = outputFunction;
+    public void setTransferFunction(Function<InputToken, OutputToken> transferFunction) {
+        this.transferFunction = transferFunction;
     }
 
-    public Function<InputToken, OutputToken> getOutputFunction() {
-        return outputFunction;
+    public Function<InputToken, OutputToken> getTransferFunction() {
+        return transferFunction;
     }
 
     public Condition getCondition() {

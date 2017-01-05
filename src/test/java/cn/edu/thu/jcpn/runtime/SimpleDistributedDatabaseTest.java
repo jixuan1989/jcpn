@@ -2,13 +2,12 @@ package cn.edu.thu.jcpn.runtime;
 
 import cn.edu.thu.jcpn.core.cpn.CPN;
 import cn.edu.thu.jcpn.core.cpn.runtime.RuntimeFoldingCPN;
-import cn.edu.thu.jcpn.core.monitor.IPlaceMonitor;
+import cn.edu.thu.jcpn.core.PlaceManager.monitor.IPlaceMonitor;
 import cn.edu.thu.jcpn.core.monitor.ITransitionMonitor;
 import cn.edu.thu.jcpn.core.place.Place;
 import cn.edu.thu.jcpn.core.runtime.GlobalClock;
 import cn.edu.thu.jcpn.core.runtime.tokens.*;
 import cn.edu.thu.jcpn.core.transition.Transition;
-import cn.edu.thu.jcpn.core.transition.condition.InputToken;
 import cn.edu.thu.jcpn.core.transition.condition.OutputToken;
 import cn.edu.thu.jcpn.elements.token.MessageToken;
 import org.apache.logging.log4j.LogManager;
@@ -85,7 +84,7 @@ public class SimpleDistributedDatabaseTest {
                 }));
 
         //t1,t2写output函数
-        transition1.setOutputFunction(
+        transition1.setTransferFunction(
                 inputToken -> {
                     OutputToken outputToken = new OutputToken();
                     MessageToken received = (MessageToken) inputToken.get(PID_2);
@@ -102,7 +101,7 @@ public class SimpleDistributedDatabaseTest {
                 }
         );
 
-        transition2.setOutputFunction(
+        transition2.setTransferFunction(
                 inputToken -> {
                     OutputToken outputToken = new OutputToken();
                     MessageToken toSend = (MessageToken) inputToken.get(PID_3);
@@ -122,20 +121,6 @@ public class SimpleDistributedDatabaseTest {
         cpn.setPlaces(placeMap);
         cpn.setTransitions(transitionMap);
         instance = new RuntimeFoldingCPN(cpn, nodes);
-        IPlaceMonitor placeMonitor = new IPlaceMonitor() {
-            @Override
-            public void reportWhenTokenConsumed(INode owner, int placeId, String placeName, IToken consumed, int transitionId, String transitionName, Collection<IToken> tested, Collection<IToken> newly, Collection<IToken> future) {
-            }
-
-            @Override
-            public void reportWhenTokensAdded(INode owner, int placeId, String placeName, Collection<IToken> newTokens, INode from, int transitionId, String transitionName, Collection<IToken> tested, Collection<IToken> newly, Collection<IToken> future) {
-
-            }
-        };
-        instance.addMonitor(PID_1, placeMonitor);
-        instance.addMonitor(PID_2, placeMonitor);
-        instance.addMonitor(PID_3, placeMonitor);
-        instance.addMonitor(PID_4, placeMonitor);
 
         ITransitionMonitor transitionMonitor = (owner, transitionId, transitionName, inputToken, outputToken) -> System.out.println( owner + "'s " + transitionName + " is fired");
         instance.addMonitor(transition1.getId(),transitionMonitor);

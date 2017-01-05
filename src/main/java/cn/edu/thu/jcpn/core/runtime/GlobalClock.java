@@ -1,18 +1,18 @@
 package cn.edu.thu.jcpn.core.runtime;
 
-import cn.edu.thu.jcpn.common.Pair;
-
+import cn.edu.thu.jcpn.common.Triple;
 import cn.edu.thu.jcpn.core.runtime.tokens.INode;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.util.Map;
+import java.util.Collections;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 
-import static cn.edu.thu.jcpn.core.runtime.GlobalClock.EventType.RUNNING;
-import static cn.edu.thu.jcpn.core.runtime.GlobalClock.EventType.SENDING;
+import static cn.edu.thu.jcpn.core.runtime.GlobalClock.EventType.LOCAL;
+import static cn.edu.thu.jcpn.core.runtime.GlobalClock.EventType.REMOTE;
 
 public class GlobalClock {
 
@@ -22,7 +22,7 @@ public class GlobalClock {
     private long time = 0L;
 
     public enum EventType {
-        RUNNING, SENDING
+        LOCAL, REMOTE
     }
 
     public static GlobalClock getInstance() {
@@ -37,30 +37,24 @@ public class GlobalClock {
         this.time = time;
     }
 
-    // <time, owner, redundant>, redundant value is useless, because java skipListMap doesn't have a concurrent HashSet implementation.
-    ConcurrentSkipListMap<Long, Map<INode, Object>> timelineForRunning = new ConcurrentSkipListMap<>();
-    ConcurrentSkipListMap<Long, Map<INode, Object>> timelineForSending = new ConcurrentSkipListMap<>();
+    // <time, node, redundant>, redundant value is useless, because java skipListMap doesn't have a concurrent HashSet implementation.
+    private ConcurrentSkipListMap<Long, Set<INode>> timelineForLocalEvents = new ConcurrentSkipListMap<>();
+    private ConcurrentSkipListMap<Long, Set<INode>> timelineForRemoteEvents = new ConcurrentSkipListMap<>();
 
-    public void addAbsoluteTimepointForRunning(INode owner, long absolutiveTime) {
-        timelineForRunning.computeIfAbsent(absolutiveTime, obj -> new ConcurrentHashMap<>()).putIfAbsent(owner, owner);
+    public void addAbsoluteTimePointForLocalHandle(INode node, long absolutiveTime) {
+        timelineForLocalEvents.computeIfAbsent(absolutiveTime, obj -> Collections.newSetFromMap(new ConcurrentHashMap<>())).add(node);
     }
 
-    /**
-     * notice, we do not recommend that add a sending event whose time point is the same with current clock (i.e., the time cost of a sending event is zero.).
-     * TODO want to fix it.
-     * @param owner
-     * @param absolutiveTime
-     */
-    public void addAbsoluteTimepointForSending(INode owner, long absolutiveTime) {
-        timelineForSending.computeIfAbsent(absolutiveTime, obj -> new ConcurrentHashMap<>()).putIfAbsent(owner, owner);
+    public void addAbsoluteTimePointForRemoteHandle(INode node, long absolutiveTime) {
+        timelineForRemoteEvents.computeIfAbsent(absolutiveTime, obj -> Collections.newSetFromMap(new ConcurrentHashMap<>())).add(node);
     }
 
     public boolean hasNextRunningTime() {
-        return !timelineForRunning.isEmpty();
+        return !timelineForLocalEvents.isEmpty();
     }
 
     public boolean hasNextSendingTime() {
-        return !timelineForSending.isEmpty();
+        return !timelineForRemoteEvents.isEmpty();
     }
 
     public boolean hasNextTime() {
@@ -69,52 +63,38 @@ public class GlobalClock {
 
     /**
      * get next latest event time point and that event. This method will poll the event from the specific queue, and update the global clock to the event time point.
-     * @return  eventType(sending or running), timePoint, event owners ( Value in the map, i.e., Object, is meaningless)
-     *          null if no events registered.
+     *
+     * @return eventType(sending or running), timePoint, event owners ( Value in the map, i.e., Object, is meaningless)
+     * null if no events registered.
      */
-    public Pair<EventType, Entry<Long, Map<INode, Object>>> timeElapse() {
-        if (this.hasNextRunningTime() && this.hasNextSendingTime()) {
-            long nextRunTime = timelineForRunning.firstKey();
-            long nextSendTime = timelineForSending.firstKey();
-            logger.debug(() -> String.format("check which event (sending or running) is earlier, sending: %d, running: %d", nextSendTime, nextRunTime));
-            if (nextRunTime < nextSendTime) {
-                time = nextRunTime;
-                return new Pair<>(RUNNING, timelineForRunning.pollFirstEntry());
-            }
-            else {
-                time = nextSendTime;
-                return new Pair<>(SENDING, timelineForSending.pollFirstEntry());
-            }
-        }
-        else if (this.hasNextSendingTime()) {
-            long nextSendTime = timelineForSending.firstKey();
-            logger.debug(() -> String.format("next time is sending event, and the current clock is %d,  next time is %d" , time, nextSendTime));
-            time = nextSendTime;
-            return new Pair<>(SENDING, timelineForSending.pollFirstEntry());
-        }
-        else if (this.hasNextRunningTime()) {
-            long nextRunTime = timelineForRunning.firstKey();
-            logger.debug(() -> String.format("next time is running event, and the current clock is %d,  next time is %d" , time, nextRunTime));
-            time = nextRunTime;
-            return new Pair<>(RUNNING, timelineForRunning.pollFirstEntry());
-        }
-        else {// both queues are empty
+    public Triple<EventType, Long, Set<INode>> timeElapse() {
+        if (!hasNextTime()) {
             logger.debug(() -> "no next time, but nextTime is called");
             return null;
         }
+
+        long nextRemoteTime = timelineForRemoteEvents.isEmpty() ? Long.MAX_VALUE : timelineForRemoteEvents.firstKey();
+        long nextLocalTime = timelineForLocalEvents.isEmpty() ? Long.MAX_VALUE : timelineForLocalEvents.firstKey();
+        EventType eventType = (nextLocalTime < nextRemoteTime) ? LOCAL : REMOTE;
+        Entry<Long, Set<INode>> timeNodes = (eventType.equals(LOCAL)) ? timelineForLocalEvents.pollFirstEntry() : timelineForRemoteEvents.pollFirstEntry();
+
+        logger.debug(() -> String.format("next time is %s event, and the current clock is %d, next time is %d", eventType.toString(), time, timeNodes.getKey()));
+        time = timeNodes.getKey();
+
+        return new Triple<>(eventType, timeNodes.getKey(), timeNodes.getValue());
     }
 
     public void logStatus() {
         StringBuilder sb = new StringBuilder();
-        timelineForRunning.forEach((time, owners) -> {
-            sb.append("time: " + time + ", running nodes: ");
-            owners.forEach((owner, obj) -> sb.append(owner + "\t"));
+        timelineForLocalEvents.forEach((time, nodes) -> {
+            sb.append("time: " + time + ", handle local event nodes: ");
+            nodes.forEach(node -> sb.append(node + "\t"));
             sb.append("\n");
         });
 
-        timelineForSending.forEach((time, owners) -> {
-            sb.append("time: " + time + ", sending nodes: ");
-            owners.forEach((owner, obj) -> sb.append(owner + "\t"));
+        timelineForRemoteEvents.forEach((time, nodes) -> {
+            sb.append("time: " + time + ", handle remote event nodes: ");
+            nodes.forEach(node -> sb.append(node + "\t"));
             sb.append("\n");
         });
         System.out.println(sb.toString());

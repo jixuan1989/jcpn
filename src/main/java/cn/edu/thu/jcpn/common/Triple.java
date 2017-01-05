@@ -8,13 +8,15 @@ package cn.edu.thu.jcpn.common;
  * @param <R>
  * @author hxd
  */
-public class Pair<L, R> {
+public class Triple<L, M, R> {
 
     private L left;
+    private M middle;
     private R right;
 
-    public Pair(L left, R right) {
+    public Triple(L left, M middle, R right) {
         this.left = left;
+        this.middle = middle;
         this.right = right;
     }
 
@@ -24,6 +26,14 @@ public class Pair<L, R> {
 
     public void setLeft(L left) {
         this.left = left;
+    }
+
+    public M getMiddle() {
+        return middle;
+    }
+
+    public void setMiddle(M middle) {
+        this.middle = middle;
     }
 
     public R getRight() {
@@ -39,6 +49,7 @@ public class Pair<L, R> {
         final int prime = 31;
         int result = 1;
         result = prime * result + ((left == null) ? 0 : left.hashCode());
+        result = prime * result + ((middle == null) ? 0 : middle.hashCode());
         result = prime * result + ((right == null) ? 0 : right.hashCode());
         return result;
     }
@@ -52,23 +63,36 @@ public class Pair<L, R> {
             return false;
         if (getClass() != obj.getClass())
             return false;
-        Pair other = (Pair) obj;
+
+        Triple other = (Triple) obj;
         if (left == null) {
             if (other.left != null)
                 return false;
-        } else if (!left.equals(other.left))
+        }
+        else if (!left.equals(other.left)) {
             return false;
+        }
+
+        if (middle == null) {
+            if (other.middle != null)
+                return false;
+        }
+        else if (!middle.equals(other.middle)) {
+            return false;
+        }
+
         if (right == null) {
             if (other.right != null)
                 return false;
-        } else if (!right.equals(other.right))
+        } else if (!right.equals(other.right)) {
             return false;
+        }
         return true;
     }
 
     @Override
     public String toString() {
-        return "Pair [left=" + left + ", right=" + right + "]";
+        return "Pair [left=" + left + ", middle=" + middle + ", right=" + right + "]";
     }
 
 }

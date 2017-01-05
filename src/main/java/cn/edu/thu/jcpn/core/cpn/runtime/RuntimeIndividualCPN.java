@@ -1,20 +1,23 @@
 package cn.edu.thu.jcpn.core.cpn.runtime;
 
-import cn.edu.thu.jcpn.core.monitor.IPlaceMonitor;
+import cn.edu.thu.jcpn.core.PlaceManager.monitor.IPlaceMonitor;
 import cn.edu.thu.jcpn.core.monitor.ITransitionMonitor;
 import cn.edu.thu.jcpn.core.place.Place;
 import cn.edu.thu.jcpn.core.place.runtime.*;
 import cn.edu.thu.jcpn.core.runtime.tokens.INode;
 import cn.edu.thu.jcpn.core.runtime.tokens.IToken;
+import cn.edu.thu.jcpn.core.recoverer.Recoverer;
 import cn.edu.thu.jcpn.core.transition.Transition;
 import cn.edu.thu.jcpn.core.transition.condition.InputToken;
 import cn.edu.thu.jcpn.core.transition.condition.OutputToken;
+import cn.edu.thu.jcpn.core.recoverer.runtime.RuntimeRecoverer;
 import cn.edu.thu.jcpn.core.transition.runtime.RuntimeTransition;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 import static cn.edu.thu.jcpn.core.cpn.runtime.RuntimeIndividualCPN.TokenType.*;
 import static java.util.stream.Collectors.groupingBy;
@@ -32,10 +35,14 @@ public class RuntimeIndividualCPN {
     private Map<Integer, RuntimeTransition> transitions;
     private Map<Integer, ITransitionMonitor> transitionMonitors;
 
+    private Map<Integer, RuntimeRecoverer> recoverers;
+
     /**
      * enable transition order by priority.
      */
     private Map<Integer, List<RuntimeTransition>> priorityTransitions;
+
+    private List<RuntimeRecoverer> canRunRecoverers;
 
     private RuntimeFoldingCPN foldingCPN;
 
@@ -46,6 +53,8 @@ public class RuntimeIndividualCPN {
 
         placeMonitors = new HashMap<>();
         transitionMonitors = new HashMap<>();
+
+        recoverers = new HashMap<>();
 
         this.foldingCPN = foldingCPN;
     }
@@ -97,13 +106,17 @@ public class RuntimeIndividualCPN {
     }
 
     private void addTransition(Transition transition) {
-        transitions.put(transition.getId(), new RuntimeTransition(owner, places, transition, foldingCPN));
+        transitions.put(transition.getId(), new RuntimeTransition(owner, transition, places, foldingCPN));
     }
 
     public void addMonitor(int tid, ITransitionMonitor monitor) {
         if (!transitions.containsKey(tid)) return;
 
         transitionMonitors.put(tid, monitor);
+    }
+
+    private void addRecoverer(Recoverer recoverer) {
+        recoverers.put(recoverer.getId(), new RuntimeRecoverer(owner, recoverer, places));
     }
 
     /**
@@ -113,10 +126,12 @@ public class RuntimeIndividualCPN {
      * @param places      no matter whether place have global place, we do not copy the global place in them
      * @param transitions
      */
-    public void construct(Collection<Place> places, Collection<Transition> transitions) {
+    public void construct(Collection<Place> places, Collection<Transition> transitions,
+                          Collection<Recoverer> recoverers) {
         //copy all the place and transition first.
         places.forEach(this::addPlace);
         transitions.forEach(this::addTransition);
+        recoverers.forEach(this::addRecoverer);
     }
 
     /**
@@ -128,10 +143,23 @@ public class RuntimeIndividualCPN {
      * @param pid
      * @param tokens
      */
-    public void addNewlyTokens(Integer pid, List<IToken> tokens) {
+    public void addPlaceTokens(Integer pid, List<IToken> tokens) {
         RuntimePlace instance = places.get(pid);
         synchronized (instance) {
             instance.addTokens(tokens);
+        }
+    }
+
+    /**
+     * neaten places: for each place, reassign the tokens according their time.
+     * For future tokens, assign them to the newly tokens if their time are arrived.
+     * For tested tokens, assign them to the timeout tokens if their time are timeout.
+     */
+    public void neatenPlaces() {
+        for (RuntimePlace place : places.values()) {
+            int pid = place.getId();
+            List<IToken> timeoutTokens = place.reassignTokens();
+            transitions.values().forEach(transition -> transition.removeTokenFromCache(pid, timeoutTokens));
         }
     }
 
@@ -180,17 +208,32 @@ public class RuntimeIndividualCPN {
         return transitions.get(random.nextInt(transitions.size()));
     }
 
+
     public OutputToken firing(RuntimeTransition transition) {
         InputToken inputToken = transition.getRandmonInputToken();
         transitions.values().forEach(innerTransition -> innerTransition.removeTokenFromCache(inputToken));
         inputToken.forEach((pid, token) -> {
             places.get(pid).removeTokenFromTest(token);
-            reportWhenTokenConsumed(places.get(pid), token, transition);
+            //reportWhenTokenConsumed(places.get(pid), token, transition);
         });
         OutputToken outputToken = transition.firing(inputToken);
-        reportWhenTokensAdded(transition, outputToken);
-        reportWhenFiring(transition, inputToken, outputToken);
+        //reportWhenTokensAdded(transition, outputToken);
+        //reportWhenFiring(transition, inputToken, outputToken);
         return outputToken;
+    }
+
+    public boolean hasCanRunRecoverers() {
+        this.canRunRecoverers = getCanRunRecoverers();
+        return !this.canRunRecoverers.isEmpty();
+    }
+
+    private List<RuntimeRecoverer> getCanRunRecoverers() {
+        return this.recoverers.values().stream().
+                filter(RuntimeRecoverer::canRun).collect(Collectors.toList());
+    }
+
+    public void runRecoverers() {
+        this.canRunRecoverers.forEach(RuntimeRecoverer::run);
     }
 
     private void reportWhenTokensAdded(RuntimeTransition transition, OutputToken outputToken) {
@@ -203,13 +246,13 @@ public class RuntimeIndividualCPN {
                 RuntimeIndividualCPN toCPN = foldingCPN.getIndividualCPN(to);
                 IPlaceMonitor monitor = toCPN.getPlaceMonitor(pid);
                 RuntimePlace toPlace = toCPN.getPlace(pid);
-                monitor.reportWhenTokensAdded(toCPN.getOwner(), toPlace.getId(), toPlace.getName(),
-                        tokens, owner, transition.getId(), transition.getName(), toPlace.getTestedTokens(),
-                        toPlace.getNewlyTokens(), toPlace.getFutureTokens());
+                monitor.reportAfterTokensAdded(toCPN.getOwner(), toPlace.getId(), toPlace.getName(),
+                        tokens, owner, transition.getId(), transition.getName(), toPlace.getTimeoutTokens(),
+                        toPlace.getTestedTokens(), toPlace.getNewlyTokens(), toPlace.getFutureTokens());
 
                 Map<TokenType, Map<INode, Collection<IToken>>> pidAllTokens = getPidAllTokens(pid);
-                monitor.reportWhenTokensAdded(owner, toPlace.getId(), toPlace.getName(), tokens, transition.getId(),
-                        transition.getName(), pidAllTokens.get(TESTED), pidAllTokens.get(NEWLY), pidAllTokens.get(FUTURE));
+                monitor.reportAfterTokensAdded(owner, toPlace.getId(), toPlace.getName(), tokens, pidAllTokens.get(TIMEOUT),
+                        pidAllTokens.get(TESTED), pidAllTokens.get(NEWLY), pidAllTokens.get(FUTURE));
             }
         }
     }
@@ -218,11 +261,11 @@ public class RuntimeIndividualCPN {
         if (!placeMonitors.containsKey(place.getId())) return;
 
         IPlaceMonitor monitor = placeMonitors.get(place.getId());
-        monitor.reportWhenTokenConsumed(owner, place.getId(), place.getName(), token, transition.getId(), transition.getName(),
+        monitor.reportAfterTokenConsumed(owner, place.getId(), place.getName(), token, transition.getId(), transition.getName(),
                 place.getTestedTokens(), place.getNewlyTokens(), place.getFutureTokens());
 
         Map<TokenType, Map<INode, Collection<IToken>>> pidAllTokens = getPidAllTokens(place.getId());
-        monitor.reportWhenTokenConsumed(owner, place.getId(), place.getName(), token, transition.getId(), transition.getName(),
+        monitor.reportAfterTokenConsumed(owner, place.getId(), place.getName(), token, transition.getId(), transition.getName(),
                 pidAllTokens.get(TESTED), pidAllTokens.get(NEWLY), pidAllTokens.get(FUTURE));
     }
 
@@ -235,23 +278,26 @@ public class RuntimeIndividualCPN {
 
     private Map<TokenType, Map<INode, Collection<IToken>>> getPidAllTokens(int pid) {
         Map<TokenType, Map<INode, Collection<IToken>>> res = new HashMap<>();
+        Map<INode, Collection<IToken>> timeout = new HashMap<>();
         Map<INode, Collection<IToken>> tested = new HashMap<>();
         Map<INode, Collection<IToken>> newly = new HashMap<>();
         Map<INode, Collection<IToken>> future = new HashMap<>();
         foldingCPN.getOwners().forEach(owner -> {
             RuntimePlace runtimePlace = foldingCPN.getIndividualCPN(owner).getPlace(pid);
+            timeout.put(owner, runtimePlace.getTimeoutTokens());
             tested.put(owner, runtimePlace.getTestedTokens());
             newly.put(owner, runtimePlace.getNewlyTokens());
             future.put(owner, runtimePlace.getFutureTokens());
         });
+        res.put(TIMEOUT, tested);
         res.put(TESTED, tested);
         res.put(NEWLY, newly);
         res.put(FUTURE, future);
         return res;
     }
 
-    protected enum TokenType {
-        TESTED, NEWLY, FUTURE
+    enum TokenType {
+        TIMEOUT, TESTED, NEWLY, FUTURE
     }
 
     @Override

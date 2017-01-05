@@ -1,8 +1,10 @@
 package cn.edu.thu.jcpn.core.cpn;
 
 import cn.edu.thu.jcpn.core.place.Place;
+import cn.edu.thu.jcpn.core.recoverer.Recoverer;
 import cn.edu.thu.jcpn.core.transition.Transition;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -14,11 +16,13 @@ public class CPN {
     private String version;
     private Map<Integer, Place> places;
     private Map<Integer, Transition> transitions;
+    private Map<Integer, Recoverer> recoverers;
 
     public CPN() {
         super();
         this.places = new HashMap<>();
         this.transitions = new HashMap<>();
+        this.recoverers = new HashMap<>();
     }
 
     public String getVersion() {
@@ -46,13 +50,11 @@ public class CPN {
     }
 
     public void addPlaces(Place... places) {
-        for(Place place : places){
-            this.places.put(place.getId(),place);
-        }
+        Arrays.stream(places).forEach(this::addPlace);
     }
 
-    public Place removePlace(int id) {
-        return places.remove(id);
+    public Place removePlace(int pid) {
+        return places.remove(pid);
     }
 
     public Map<Integer, Transition> getTransitions() {
@@ -68,12 +70,30 @@ public class CPN {
     }
 
     public void addTransitions(Transition... transitions) {
-        for(Transition transition : transitions){
-            this.transitions.put(transition.getId(),transition);
-        }
+        Arrays.stream(transitions).forEach(this::addTransition);
     }
 
-    public Transition removeTransition(int id) {
-        return transitions.remove(id);
+    public Transition removeTransition(int tid) {
+        return transitions.remove(tid);
+    }
+
+    public Map<Integer, Recoverer> getRecoverers() {
+        return recoverers;
+    }
+
+    public void setRecoverers(Map<Integer, Recoverer> recoverers) {
+        this.recoverers = recoverers;
+    }
+
+    public void addRecoverer(Recoverer recoverer) {
+        recoverers.put(recoverer.getId(), recoverer);
+    }
+
+    public void addRecoverers(Recoverer... recoverers) {
+        Arrays.stream(recoverers).forEach(this::addRecoverer);
+    }
+
+    public Recoverer removeRecoverer(int rid) {
+        return recoverers.remove(rid);
     }
 }

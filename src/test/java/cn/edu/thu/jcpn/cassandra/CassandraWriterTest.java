@@ -92,7 +92,7 @@ public class CassandraWriterTest {
         Place place7 = new Place(7, "writing queue", PlaceType.LOCAL);
 
         transition1.addOutPlace(place3).addOutPlace(place4).addOutPlace(place7);
-        transition1.setOutputFunction(inputToken -> {
+        transition1.setTransferFunction(inputToken -> {
             OutputToken outputToken = new OutputToken();
             RequestToken request = (RequestToken) inputToken.get(place1.getId());
             INode cooperatorNode = request.getOwner();
@@ -118,7 +118,7 @@ public class CassandraWriterTest {
         Transition transition2 = new Transition(2, "transmit");
         transition2.addInPlace(place3).addInPlace(place5);
         transition2.addOutPlace(place5).addOutPlace(place6);
-        transition2.setOutputFunction(inputToken -> {
+        transition2.setTransferFunction(inputToken -> {
             OutputToken outputToken = new OutputToken();
             MessageToken toSend = (MessageToken) inputToken.get(place3.getId());
             MessageToken received = new MessageToken(toSend.getRid(), toSend.getKey(), toSend.getValue(), toSend.getType());
@@ -141,7 +141,7 @@ public class CassandraWriterTest {
         });
 
         transition3.addOutPlace(place7);
-        transition3.setOutputFunction(inputToken -> {
+        transition3.setTransferFunction(inputToken -> {
             OutputToken outputToken = new OutputToken();
             MessageToken received = (MessageToken) inputToken.get(place6.getId());
 
@@ -159,7 +159,7 @@ public class CassandraWriterTest {
         Place place9 = new Place(9, "ack queue");
 
         transition4.addOutPlace(place8).addOutPlace(place9);
-        transition4.setOutputFunction(inputToken -> {
+        transition4.setTransferFunction(inputToken -> {
             OutputToken outputToken = new OutputToken();
             WriteToken toWrite = (WriteToken) inputToken.get(place7.getId());
             outputToken.addToken(toWrite.getOwner(), place8.getId(), toWrite);
@@ -191,7 +191,7 @@ public class CassandraWriterTest {
 
             return outputToken;
         };
-        transition5.setOutputFunction(ackFunction);
+        transition5.setTransferFunction(ackFunction);
 
         Transition transition6 = new Transition(6, "enter sending queue");
         transition6.addInPlace(place9);
@@ -203,7 +203,7 @@ public class CassandraWriterTest {
         });
 
         transition6.addOutPlace(place3);
-        transition6.setOutputFunction(inputToken -> {
+        transition6.setTransferFunction(inputToken -> {
             OutputToken outputToken = new OutputToken();
             AckToken ack = (AckToken) inputToken.get(place9.getId());
             MessageToken toSend = new MessageToken(ack.getRid(), null, null, TokenType.ACK);
@@ -224,7 +224,7 @@ public class CassandraWriterTest {
         });
 
         transition7.addOutPlace(place10);
-        transition7.setOutputFunction(inputToken -> {
+        transition7.setTransferFunction(inputToken -> {
             OutputToken outputToken = new OutputToken();
             MessageToken received = (MessageToken) inputToken.get(place6.getId());
             AckToken ack = new AckToken(received.getRid());
@@ -245,7 +245,7 @@ public class CassandraWriterTest {
         });
 
         transition8.addOutPlace(place4);
-        transition8.setOutputFunction(ackFunction);
+        transition8.setTransferFunction(ackFunction);
 
         Transition transition9 = new Transition(9, "finish");
         transition9.addInPlace(place4);
@@ -258,7 +258,7 @@ public class CassandraWriterTest {
 
         Place place11 = new Place(11, "response", PlaceType.LOCAL);
         transition9.addOutPlace(place11);
-        transition9.setOutputFunction(inputToken -> {
+        transition9.setTransferFunction(inputToken -> {
             OutputToken outputToken = new OutputToken();
             CallBackToken callBack = (CallBackToken) inputToken.get(place4.getId());
             ResponseToken response = new ResponseToken(callBack.getRid(), ResponseType.SUCCESS);
@@ -274,7 +274,7 @@ public class CassandraWriterTest {
         Transition transition10 = new Transition(10, "timeout");
         transition10.addInPlace(place4);
         transition10.addOutPlace(place11);
-        transition10.setOutputFunction(inputToken -> {
+        transition10.setTransferFunction(inputToken -> {
             OutputToken outputToken = new OutputToken();
             CallBackToken callBack = (CallBackToken) inputToken.get(place4.getId());
             ResponseToken response = new ResponseToken(callBack.getRid(), ResponseType.TIMEOUT);
@@ -287,7 +287,7 @@ public class CassandraWriterTest {
 
         Transition transition11 = new Transition(11, "network partition");
         transition11.addInPlace(place5).addInPlace(place12);
-        transition11.setOutputFunction(inputToken -> {
+        transition11.setTransferFunction(inputToken -> {
             OutputToken outputToken = new OutputToken();
             return outputToken;
         });

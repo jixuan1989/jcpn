@@ -1,20 +1,20 @@
 package cn.edu.thu.jcpn.core.cpn.runtime;
 
-import cn.edu.thu.jcpn.common.Pair;
+import cn.edu.thu.jcpn.common.Triple;
 import cn.edu.thu.jcpn.core.cpn.CPN;
-import cn.edu.thu.jcpn.core.monitor.IPlaceMonitor;
+import cn.edu.thu.jcpn.core.PlaceManager.monitor.IPlaceMonitor;
 import cn.edu.thu.jcpn.core.monitor.ITransitionMonitor;
 import cn.edu.thu.jcpn.core.place.Place;
 import cn.edu.thu.jcpn.core.runtime.GlobalClock;
+import cn.edu.thu.jcpn.core.runtime.GlobalClock.EventType;
 import cn.edu.thu.jcpn.core.runtime.tokens.INode;
+import cn.edu.thu.jcpn.core.recoverer.Recoverer;
 import cn.edu.thu.jcpn.core.transition.Transition;
 import cn.edu.thu.jcpn.core.transition.runtime.RuntimeTransition;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.util.*;
-
-import static cn.edu.thu.jcpn.core.runtime.GlobalClock.EventType.SENDING;
 
 public class RuntimeFoldingCPN {
 
@@ -25,11 +25,11 @@ public class RuntimeFoldingCPN {
     private Map<INode, RuntimeIndividualCPN> individualCPNs;
     private boolean compiled;
 
+    private GlobalClock globalClock;
     /**
      * // set the maximal execution time of CPN global clock.
      * (because some CPN can execute forever, so we can disrupt the process after maximumExecutionTime.)
      */
-    private GlobalClock globalClock;
     private long maximumExecutionTime;
 
     public RuntimeFoldingCPN(CPN graph, List<INode> owners) {
@@ -56,14 +56,15 @@ public class RuntimeFoldingCPN {
 
         Collection<Place> places = graph.getPlaces().values();
         Collection<Transition> transitions = graph.getTransitions().values();
+        Collection<Recoverer> timeoutTransitions = graph.getRecoverers().values();
 
         for (INode owner : owners) {
             RuntimeIndividualCPN individualCPN = new RuntimeIndividualCPN(owner, this);
-            individualCPN.construct(places, transitions);
+            individualCPN.construct(places, transitions, timeoutTransitions);
             individualCPNs.put(owner, individualCPN);
         }
 
-        owners.forEach(owner -> globalClock.addAbsoluteTimepointForSending(owner, 0L));
+        owners.forEach(owner -> globalClock.addAbsoluteTimePointForRemoteHandle(owner, 0L));
 
         compiled = true;
         return compiled;
@@ -108,17 +109,10 @@ public class RuntimeFoldingCPN {
     /**
      * get the individualCPN of the owner.
      *
-     * note: if the method is called by a transition, it will get the to(remote) individual CPN.
-     * and if the owner is a LocalAsTarget type, it means get the owner itself. So the owner 'from'
-     * represents the owner of the transition.
-     * If you will not pass a LocalAsTarget type of owner, you may just pass the 'null' to the second param.
-     *
      * @param owner the owner of the individual CPN you want to get.
      * @return
      */
     public RuntimeIndividualCPN getIndividualCPN(INode owner) {
-        //INode realOwner = (owner instanceof LocalAsTarget) ? from : owner;
-        //return individualCPNs.get(realOwner);
         return individualCPNs.get(owner);
     }
 
@@ -154,24 +148,30 @@ public class RuntimeFoldingCPN {
         }
 
         globalClock.logStatus();
-        Pair<GlobalClock.EventType, Map.Entry<Long, Map<INode, Object>>> nextEventTimeOwner = globalClock.timeElapse();
-        GlobalClock.EventType eventType = nextEventTimeOwner.getLeft();
-        Map.Entry<Long, Map<INode, Object>> timeOwner = nextEventTimeOwner.getRight();
-        System.out.println("current status:");
-        logStatus();
-        if (eventType.equals(SENDING)) {
-            logger.trace(() -> "will get next sending event..." + timeOwner);
-            System.out.println("run sending events:");
-            timeOwner.getValue().keySet().parallelStream().forEach(owner -> runACPNInstance(getIndividualCPN(owner)));
-        } else {
-            logger.trace(() -> "will get next running event..." + timeOwner);
-            System.out.println("run running events:");
-            timeOwner.getValue().keySet().parallelStream().forEach(owner -> runACPNInstance(getIndividualCPN(owner)));
+
+        Triple<EventType, Long, Set<INode>> nextEventTimeNodes = globalClock.timeElapse();
+        if (null == nextEventTimeNodes) {
+            return false;
         }
+
+        EventType eventType = nextEventTimeNodes.getLeft();
+        Set<INode> nodes = nextEventTimeNodes.getRight();
+
+        logStatus();
+
+        logger.trace(() -> String.format("Run handling %s events... %s", eventType.toString(), nodes));
+        System.out.println(String.format("Run handling %s events... %s", eventType.toString(), nodes));
+        nodes.parallelStream().forEach(node -> runACPNInstance(getIndividualCPN(node)));
         return true;
     }
 
     private void runACPNInstance(RuntimeIndividualCPN individualCPN) {
+        individualCPN.neatenPlaces();
+        if (individualCPN.hasCanRunRecoverers()) {
+            individualCPN.runRecoverers();
+            individualCPN.neatenPlaces();
+        }
+
         individualCPN.notifyTransitions();
         while (individualCPN.hasEnableTransitions()) {
             RuntimeTransition transition = individualCPN.randomEnable();

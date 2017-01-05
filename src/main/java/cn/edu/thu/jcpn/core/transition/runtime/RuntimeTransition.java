@@ -28,14 +28,14 @@ import java.util.stream.Collectors;
  */
 public class RuntimeTransition {
 
-    private INode owner;
+    protected INode owner;
     private int id;
     private String name;
     private int priority = 500;
     private TransitionType type;
 
     private Condition condition;
-    private Function<InputToken, OutputToken> outputFunction;
+    private Function<InputToken, OutputToken> transferFunction;
 
     private Map<Integer, Integer> inPidPriorities;
 
@@ -53,16 +53,15 @@ public class RuntimeTransition {
 
     private GlobalClock globalClock;
 
-    public RuntimeTransition(INode owner, Map<Integer, RuntimePlace> runtimePlaces,
-                             Transition transition, RuntimeFoldingCPN foldingCPN) {
+    public RuntimeTransition(INode owner, Transition transition, Map<Integer, RuntimePlace>
+            runtimePlaces, RuntimeFoldingCPN foldingCPN) {
         this.owner = owner;
         this.id = transition.getId();
         this.name = transition.getName();
-        this.priority = transition.getPriority();
         this.type = transition.getType();
-
+        this.transferFunction = transition.getTransferFunction();
+        this.priority = transition.getPriority();
         this.condition = transition.getCondition();
-        this.outputFunction = transition.getOutputFunction();
 
         this.inPidPriorities = transition.getInPidPriorities();
         this.inPlaces = new HashMap<>();
@@ -127,8 +126,8 @@ public class RuntimeTransition {
         return outPlaces;
     }
 
-    public Function<InputToken, OutputToken> getOutputFunction() {
-        return outputFunction;
+    public Function<InputToken, OutputToken> getTransferFunction() {
+        return transferFunction;
     }
 
     /**
@@ -195,12 +194,12 @@ public class RuntimeTransition {
     }
 
     /**
-     * @param inputTokens
+     * @param inputToken
      * @return
      */
-    public OutputToken firing(InputToken inputTokens) {
-        if (outputFunction == null) return null;
-        OutputToken outputToken = this.outputFunction.apply(inputTokens);
+    public OutputToken firing(InputToken inputToken) {
+        if (transferFunction == null) return null;
+        OutputToken outputToken = this.transferFunction.apply(inputToken);
 
         for (Entry<INode, Map<Integer, List<IToken>>> toPidTokens : outputToken.entrySet()) {
             INode to = toPidTokens.getKey();
@@ -211,16 +210,7 @@ public class RuntimeTransition {
                 tokens.forEach(token -> token.setOwner(to));
                 RuntimePlace toPlace = getOutPlace(to, pid);
                 toPlace.addTokens(tokens);
-
-                tokens.forEach(token -> {
-                    // register a event in the timeline.
-                    long time = token.getTime();
-                    if (owner.equals(to)) {
-                        globalClock.addAbsoluteTimepointForRunning(owner, time);
-                    } else {
-                        globalClock.addAbsoluteTimepointForSending(to, time);
-                    }
-                });
+                registerEvents(owner, to, tokens);
             }
         }
         return outputToken;
@@ -236,6 +226,18 @@ public class RuntimeTransition {
         return toPlaces.get(pid);
     }
 
+    private void registerEvents(INode owner, INode to, List<IToken> tokens) {
+        tokens.forEach(token -> {
+            // register a event in the timeline.
+            long time = token.getTime();
+            if (owner.equals(to)) {
+                globalClock.addAbsoluteTimePointForLocalHandle(owner, time);
+            } else {
+                globalClock.addAbsoluteTimePointForRemoteHandle(to, time);
+            }
+        });
+    }
+
     public Map<PlacePartition, List<InputToken>> getAllAvailableTokens() {
         return cache;
     }
@@ -249,19 +251,22 @@ public class RuntimeTransition {
      * @param inputTokens
      */
     public void removeTokenFromCache(InputToken inputTokens) {
-        for (Entry<Integer, IToken> inputToken : inputTokens.entrySet()) {
-            int pid = inputToken.getKey();
-            IToken token = inputToken.getValue();
+        inputTokens.forEach(this::removeTokenFromCache);
+    }
 
-            for (Entry<PlacePartition, List<InputToken>> partitionEntry : cache.entrySet()) {
-                PlacePartition partition = partitionEntry.getKey();
-                if (!partition.contains(pid)) continue;
+    public void removeTokenFromCache(int pid, List<IToken> tokens) {
+        tokens.forEach(token -> removeTokenFromCache(pid, token));
+    }
 
-                List<InputToken> tokenSets = partitionEntry.getValue();
-                List<InputToken> removedTokenSets = tokenSets.stream().
-                        filter(tokenSet -> tokenSet.containsValue(token)).collect(Collectors.toList());
-                tokenSets.removeAll(removedTokenSets);
-            }
+    private void removeTokenFromCache(int pid, IToken token) {
+        for (Entry<PlacePartition, List<InputToken>> partitionEntry : cache.entrySet()) {
+            PlacePartition partition = partitionEntry.getKey();
+            if (!partition.contains(pid)) continue;
+
+            List<InputToken> tokenSets = partitionEntry.getValue();
+            List<InputToken> removedTokenSets = tokenSets.stream().
+                    filter(tokenSet -> tokenSet.containsValue(token)).collect(Collectors.toList());
+            tokenSets.removeAll(removedTokenSets);
         }
     }
 }

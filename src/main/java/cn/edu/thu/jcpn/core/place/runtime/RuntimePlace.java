@@ -28,9 +28,12 @@ public class RuntimePlace {
      * <br>And in this case, it does not have a LocalAsTarget entry.
      * <br>And the type of the place is COMMUNICATING.
      */
+    private List<IToken> futureTokens;
     private List<IToken> newlyTokens;
     private List<IToken> testedTokens;
-    private List<IToken> futureTokens;
+    private List<IToken> timeoutTokens;
+
+    private int timeout;
 
     private GlobalClock globalClock;
     private static Random random = new Random();
@@ -42,9 +45,12 @@ public class RuntimePlace {
         this.type = place.getType();
         this.placeStrategy = place.getPlaceStrategy();
 
-        this.newlyTokens = new ArrayList<>();
-        this.testedTokens = new ArrayList<>();
         this.futureTokens = new CopyOnWriteArrayList<>();
+        this.newlyTokens = new CopyOnWriteArrayList<>();
+        this.testedTokens = new ArrayList<>();
+        this.timeoutTokens = new ArrayList<>();
+        this.timeout = Integer.MAX_VALUE >> 1;
+
         this.globalClock = GlobalClock.getInstance();
 
         this.addTokens(place.getTokensByOwner(this.owner));
@@ -70,6 +76,10 @@ public class RuntimePlace {
         this.owner = owner;
     }
 
+    public List<IToken> getFutureTokens() {
+        return futureTokens;
+    }
+
     public List<IToken> getNewlyTokens() {
         return newlyTokens;
     }
@@ -78,8 +88,8 @@ public class RuntimePlace {
         return testedTokens;
     }
 
-    public List<IToken> getFutureTokens() {
-        return futureTokens;
+    public List<IToken> getTimeoutTokens() {
+        return timeoutTokens;
     }
 
     public void addTokens(List<IToken> tokens) {
@@ -175,20 +185,32 @@ public class RuntimePlace {
         newlyTokens.clear();
     }
 
+    public List<IToken> reassignTokens() {
+        List<IToken> enables = futureTokens.stream().
+                filter(token -> token.getTime() <= globalClock.getTime()).collect(Collectors.toList());
+        futureTokens.removeAll(enables);
+        newlyTokens.addAll(enables);
+
+        List<IToken> timeouts = testedTokens.stream().
+                filter(token -> token.getTime() > globalClock.getTime() + timeout).collect(Collectors.toList());
+        testedTokens.removeAll(timeouts);
+        timeoutTokens.addAll(timeouts);
+
+        return timeouts;
+    }
+
     /**
      * check whether newly tokens is empty.
-     * This method will check all the future tokens, and reassign tokens into newly or future queues, by comparing with global clock.
      *
-     * @return true if after reassigning, newly tokens is not empty;
+     * @return true if newly tokens is not empty;
      * false, otherwise.
      */
     public boolean hasNewlyTokens() {
-        List<IToken> timeUp = futureTokens.stream().
-                filter(token -> token.getTime() <= GlobalClock.getInstance().getTime()).collect(Collectors.toList());
-        futureTokens.removeAll(timeUp);
-        newlyTokens.addAll(timeUp);
-
         return !newlyTokens.isEmpty();
+    }
+
+    public boolean hasTimeOutTokens() {
+        return !timeoutTokens.isEmpty();
     }
 
     public boolean removeTokenFromTest(IToken token) {
