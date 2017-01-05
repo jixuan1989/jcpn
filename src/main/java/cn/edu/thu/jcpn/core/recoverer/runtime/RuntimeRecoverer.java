@@ -1,5 +1,6 @@
 package cn.edu.thu.jcpn.core.recoverer.runtime;
 
+import cn.edu.thu.jcpn.core.monitor.IExecutor;
 import cn.edu.thu.jcpn.core.place.runtime.RuntimePlace;
 import cn.edu.thu.jcpn.core.runtime.GlobalClock;
 import cn.edu.thu.jcpn.core.runtime.tokens.INode;
@@ -15,7 +16,7 @@ import java.util.function.Function;
 /**
  * Created by leven on 2017/1/4.
  */
-public class RuntimeRecoverer {
+public class RuntimeRecoverer implements IExecutor {
 
     private int id;
     private String name;
@@ -46,6 +47,20 @@ public class RuntimeRecoverer {
         globalClock = GlobalClock.getInstance();
     }
 
+    @Override
+    public int getId() {
+        return id;
+    }
+
+    @Override
+    public String getName() {
+        return name;
+    }
+
+    public INode getOwner() {
+        return owner;
+    }
+
     public boolean canRun() {
         return this.inPlace.hasTimeOutTokens();
     }
@@ -53,13 +68,17 @@ public class RuntimeRecoverer {
     /**
      * recover the timeout tokens and then clean up the timeout tokens' queue.
      */
-    public void run() {
+    public Map<IToken, Map<Integer, List<IToken>>> execute() {
+        Map<IToken, Map<Integer, List<IToken>>> tokenToPidTokens = new HashMap<>();
         List<IToken> timeouts = this.inPlace.getTimeoutTokens();
         timeouts.forEach(token -> {
             Map<Integer, List<IToken>> toPidTokens = transferFunction.apply(token);
+            tokenToPidTokens.put(token, toPidTokens);
             handleOutput(toPidTokens);
         });
         timeouts.clear();
+
+        return tokenToPidTokens;
     }
 
     /**

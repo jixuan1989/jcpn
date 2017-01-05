@@ -31,7 +31,7 @@ public class InputToken extends HashMap<Integer, IToken> {
     }
 
     /**
-     * note: if the pid is already exist, run the value.
+     * note: if the pid is already exist, execute the value.
      *
      * @param pid
      * @param token

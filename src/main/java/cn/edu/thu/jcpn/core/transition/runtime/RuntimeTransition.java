@@ -2,6 +2,7 @@ package cn.edu.thu.jcpn.core.transition.runtime;
 
 import cn.edu.thu.jcpn.core.cpn.runtime.RuntimeFoldingCPN;
 import cn.edu.thu.jcpn.core.cpn.runtime.RuntimeIndividualCPN;
+import cn.edu.thu.jcpn.core.monitor.IExecutor;
 import cn.edu.thu.jcpn.core.place.Place;
 import cn.edu.thu.jcpn.core.runtime.tokens.INode;
 import cn.edu.thu.jcpn.core.place.runtime.RuntimePlace;
@@ -22,11 +23,11 @@ import java.util.stream.Collectors;
 /**
  * Transition is the minimum unit to execute an event. Firstly, the individualCPN calls the
  * hasEnableTransitions method to get the transitions who can be executed. Then the CPN randomly
- * picks one transition to prepare to execute it through calling the transition's getRandmonInputToken,
+ * picks one transition to prepare to execute it through calling the transition's getInputToken,
  * and gets the inputToken from the transition's cache. Then, the inputToken is used to fire the transition.
  * After that, the relative input tokens are removed from all relative transitions' caches and the original places.
  */
-public class RuntimeTransition {
+public class RuntimeTransition implements IExecutor {
 
     protected INode owner;
     private int id;
@@ -98,7 +99,7 @@ public class RuntimeTransition {
         return completePartition.subtract(conditionPartition);
     }
 
-    public Integer getId() {
+    public int getId() {
         return id;
     }
 
@@ -187,9 +188,12 @@ public class RuntimeTransition {
         return cache.values().stream().noneMatch(List::isEmpty);
     }
 
-    public InputToken getRandmonInputToken() {
+    public InputToken getInputToken() {
         InputToken inputToken = new InputToken();
-        cache.values().forEach(partitionTokens -> inputToken.merge(partitionTokens.get(0)));
+        if (canFire()) {
+            cache.values().forEach(partitionTokens -> inputToken.merge(partitionTokens.get(0)));
+        }
+
         return inputToken;
     }
 
@@ -198,7 +202,7 @@ public class RuntimeTransition {
      * @return
      */
     public OutputToken firing(InputToken inputToken) {
-        if (transferFunction == null) return null;
+        if (null == transferFunction || inputToken.isEmpty()) return null;
         OutputToken outputToken = this.transferFunction.apply(inputToken);
 
         for (Entry<INode, Map<Integer, List<IToken>>> toPidTokens : outputToken.entrySet()) {

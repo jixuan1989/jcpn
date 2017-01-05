@@ -1,4 +1,4 @@
-package cn.edu.thu.jcpn.core.lookuptable;
+package cn.edu.thu.jcpn.core.configuration;
 
 import cn.edu.thu.jcpn.core.runtime.tokens.INode;
 

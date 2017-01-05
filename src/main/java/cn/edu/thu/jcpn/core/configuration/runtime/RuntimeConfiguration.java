@@ -1,6 +1,6 @@
-package cn.edu.thu.jcpn.core.lookuptable.runtime;
+package cn.edu.thu.jcpn.core.configuration.runtime;
 
-import cn.edu.thu.jcpn.core.lookuptable.Configuration;
+import cn.edu.thu.jcpn.core.configuration.Configuration;
 import cn.edu.thu.jcpn.core.runtime.tokens.INode;
 
 import java.util.HashMap;

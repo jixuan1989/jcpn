@@ -167,15 +167,15 @@ public class RuntimeFoldingCPN {
 
     private void runACPNInstance(RuntimeIndividualCPN individualCPN) {
         individualCPN.neatenPlaces();
-        if (individualCPN.hasCanRunRecoverers()) {
-            individualCPN.runRecoverers();
+        if (individualCPN.hasEnableRecoverers()) {
+            individualCPN.fireAllRecoverers();
             individualCPN.neatenPlaces();
         }
 
         individualCPN.notifyTransitions();
         while (individualCPN.hasEnableTransitions()) {
             RuntimeTransition transition = individualCPN.randomEnable();
-            individualCPN.firing(transition);
+            individualCPN.fire(transition);
         }
     }
 

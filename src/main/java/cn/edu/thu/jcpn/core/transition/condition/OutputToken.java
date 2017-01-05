@@ -32,7 +32,7 @@ public class OutputToken extends HashMap<INode, Map<Integer, List<IToken>>> {
     }
 
     /**
-     * note: if the pid is already exist, run the value.
+     * note: if the pid is already exist, execute the value.
      *
      * @param target
      * @param pid
