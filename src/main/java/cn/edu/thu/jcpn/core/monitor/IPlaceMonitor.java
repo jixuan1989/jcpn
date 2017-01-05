@@ -1,4 +1,4 @@
-package cn.edu.thu.jcpn.core.PlaceManager.monitor;
+package cn.edu.thu.jcpn.core.monitor;
 
 import cn.edu.thu.jcpn.core.runtime.tokens.INode;
 import cn.edu.thu.jcpn.core.runtime.tokens.IToken;

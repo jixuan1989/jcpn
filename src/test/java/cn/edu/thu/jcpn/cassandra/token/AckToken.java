@@ -9,7 +9,8 @@ public class AckToken extends IToken {
 
     private int rid;
 
-    public AckToken(int rid) {
+    public AckToken(int rid, long effective) {
+        super(effective);
         this.rid = rid;
     }
 

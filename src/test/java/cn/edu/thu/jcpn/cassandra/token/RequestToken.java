@@ -10,16 +10,19 @@ public class RequestToken extends IToken {
     private int id;
     private String key;
     private String value;
+    private long version;
     private int consistency;
 
     private static int count = 0;
 
-    public RequestToken(String key, String value, int consistency) {
-        super();
+    public RequestToken(String key, String value, int consistency, long absoluteTime) {
+        super(absoluteTime);
+        this.time=absoluteTime;
         this.id = count++;
         this.key = key;
         this.value = value;
         this.consistency = consistency;
+        this.version=this.time;
     }
 
     public int getId() {
@@ -36,5 +39,13 @@ public class RequestToken extends IToken {
 
     public int getConsistency() {
         return consistency;
+    }
+
+    public long getVersion(){
+        return version;
+    }
+
+    public void setVersion(long version){
+        this.version=version;
     }
 }

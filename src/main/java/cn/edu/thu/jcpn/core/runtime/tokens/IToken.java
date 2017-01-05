@@ -20,10 +20,12 @@ public abstract class IToken {
 
     protected long time;
 
+    protected IToken(long effective) {
+        this.time = globalClock.getTime() + effective;
+    }
+
     private static GlobalClock globalClock = GlobalClock.getInstance();
 
-    protected IToken() {
-    }
 
     protected IToken(INode from, INode owner, INode to) {
         this.from = from;
@@ -65,5 +67,9 @@ public abstract class IToken {
 
     public void setTimeCost(long timeCost) {
         this.time = globalClock.getTime() + timeCost;
+    }
+
+    public boolean isLocal() {
+        return this.from == null || this.from.equals(this.owner);
     }
 }

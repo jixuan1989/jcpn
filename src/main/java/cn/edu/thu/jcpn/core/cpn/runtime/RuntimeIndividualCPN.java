@@ -1,6 +1,6 @@
 package cn.edu.thu.jcpn.core.cpn.runtime;
 
-import cn.edu.thu.jcpn.core.PlaceManager.monitor.IPlaceMonitor;
+import cn.edu.thu.jcpn.core.monitor.IPlaceMonitor;
 import cn.edu.thu.jcpn.core.monitor.IExecutor;
 import cn.edu.thu.jcpn.core.monitor.ITransitionMonitor;
 import cn.edu.thu.jcpn.core.place.Place;

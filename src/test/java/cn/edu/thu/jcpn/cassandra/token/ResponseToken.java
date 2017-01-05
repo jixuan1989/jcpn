@@ -10,7 +10,8 @@ public class ResponseToken extends IToken {
     private int rid;
     private ResponseType type;
 
-    public ResponseToken(int rid, ResponseType type) {
+    public ResponseToken(int rid, ResponseType type, long effective) {
+        super(effective);
         this.rid = rid;
         this.type = type;
     }

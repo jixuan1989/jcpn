@@ -2,7 +2,7 @@ package cn.edu.thu.jcpn.core.cpn.runtime;
 
 import cn.edu.thu.jcpn.common.Triple;
 import cn.edu.thu.jcpn.core.cpn.CPN;
-import cn.edu.thu.jcpn.core.PlaceManager.monitor.IPlaceMonitor;
+import cn.edu.thu.jcpn.core.monitor.IPlaceMonitor;
 import cn.edu.thu.jcpn.core.monitor.ITransitionMonitor;
 import cn.edu.thu.jcpn.core.place.Place;
 import cn.edu.thu.jcpn.core.runtime.GlobalClock;

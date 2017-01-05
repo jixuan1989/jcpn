@@ -14,7 +14,7 @@ public class HashToken extends IToken {
     private List<INode> nodes;
 
     public HashToken(int hashCode, List<INode> nodes) {
-        super();
+        super(0);
         this.hashCode = hashCode;
         this.nodes = nodes;
     }

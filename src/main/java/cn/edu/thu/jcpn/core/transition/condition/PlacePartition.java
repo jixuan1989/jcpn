@@ -7,10 +7,18 @@ import java.util.*;
 /**
  * placeSet is a group of place' ids.
  * e.g., a group of input place, a group of output place.
- *
+ * <p>
  * Created by leven on 2016/12/7.
  */
 public class PlacePartition extends TreeSet<Integer> {
+
+    public PlacePartition() {
+
+    }
+
+    public PlacePartition(Integer... pids) {
+        Arrays.stream(pids).forEach(super::add);
+    }
 
     /**
      * pids is a copy of the data order by priorities of the places in these partition.

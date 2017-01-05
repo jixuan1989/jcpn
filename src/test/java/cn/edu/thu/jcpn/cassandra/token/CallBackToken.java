@@ -10,8 +10,8 @@ public class CallBackToken extends IToken {
     private int rid;
     private int callback;
 
-    public CallBackToken(int rid, int callback) {
-        super();
+    public CallBackToken(int rid, int callback, long effective) {
+        super(effective);
         this.rid = rid;
         this.callback = callback;
     }
