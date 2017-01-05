@@ -20,12 +20,11 @@ public abstract class IToken {
 
     protected long time;
 
-    protected IToken(long effective) {
-        this.time = globalClock.getTime() + effective;
+    protected IToken() {
+        this.time = globalClock.getTime();
     }
 
     private static GlobalClock globalClock = GlobalClock.getInstance();
-
 
     protected IToken(INode from, INode owner, INode to) {
         this.from = from;

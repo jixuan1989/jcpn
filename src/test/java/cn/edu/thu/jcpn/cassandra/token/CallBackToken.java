@@ -11,7 +11,8 @@ public class CallBackToken extends IToken {
     private int callback;
 
     public CallBackToken(int rid, int callback, long effective) {
-        super(effective);
+        super();
+        super.setTimeCost(effective);
         this.rid = rid;
         this.callback = callback;
     }

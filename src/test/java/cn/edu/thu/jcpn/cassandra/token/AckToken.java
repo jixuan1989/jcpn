@@ -10,7 +10,8 @@ public class AckToken extends IToken {
     private int rid;
 
     public AckToken(int rid, long effective) {
-        super(effective);
+        super();
+        super.setTimeCost(effective);
         this.rid = rid;
     }
 

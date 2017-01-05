@@ -13,7 +13,8 @@ public class WriteToken extends IToken {
     private String value;
 
     public WriteToken(int rid, String key, String value, long effective) {
-        super(effective);
+        super();
+        super.setTimeCost(effective);
         this.rid = rid;
         this.key = key;
         this.value = value;

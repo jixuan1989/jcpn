@@ -11,7 +11,8 @@ public class ResponseToken extends IToken {
     private ResponseType type;
 
     public ResponseToken(int rid, ResponseType type, long effective) {
-        super(effective);
+        super();
+        super.setTimeCost(effective);
         this.rid = rid;
         this.type = type;
     }

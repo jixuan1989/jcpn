@@ -19,7 +19,7 @@ public class UnitToken extends IToken {
     }
 
     public UnitToken() {
-        super(0);
+        super();
         time = GlobalClock.getInstance().getTime();
     }
 }

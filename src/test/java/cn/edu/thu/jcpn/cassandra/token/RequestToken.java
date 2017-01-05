@@ -16,7 +16,7 @@ public class RequestToken extends IToken {
     private static int count = 0;
 
     public RequestToken(String key, String value, int consistency, long absoluteTime) {
-        super(0);
+        super();
         this.time = absoluteTime;
         this.id = count++;
         this.key = key;

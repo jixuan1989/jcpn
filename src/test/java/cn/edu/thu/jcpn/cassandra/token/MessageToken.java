@@ -13,7 +13,8 @@ public class MessageToken extends IToken {
     private TokenType type;
 
     public MessageToken(int rid, String key, String value, TokenType type, long effective) {
-        super(effective);
+        super();
+        super.setTimeCost(effective);
         this.rid = rid;
         this.key = key;
         this.value = value;
