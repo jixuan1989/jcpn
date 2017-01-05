@@ -12,8 +12,8 @@ public class WriteToken extends IToken {
     private String key;
     private String value;
 
-    public WriteToken(int rid, String key, String value, long effictive) {
-        super(effictive);
+    public WriteToken(int rid, String key, String value, long effective) {
+        super(effective);
         this.rid = rid;
         this.key = key;
         this.value = value;
