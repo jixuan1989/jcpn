@@ -32,6 +32,7 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import static cn.edu.thu.jcpn.core.executor.transition.Transition.TransitionType;
+
 /**
  * Created by leven on 2016/12/25.
  */
@@ -43,7 +44,7 @@ public class CassandraWriterTest {
     private static int CLIENT_NUMBER = 1;
 
     private static int REPLICA = 3;
-    private static int CONSISTENCY = 1;
+    private static int CONSISTENCY = 2;
 
     private RuntimeFoldingCPN instance;
 
@@ -81,8 +82,6 @@ public class CassandraWriterTest {
                 mapToObj(x -> new StringNode("server" + x)).collect(Collectors.toList());
 
 
-
-
         Place place200 = new Place(200, "request", PlaceType.LOCAL);
         for (int i = 0; i < 10; ++i) {
             clients.forEach(client -> place200.addInitToken(client, new RequestToken("key", "value", CONSISTENCY)));
@@ -102,7 +101,7 @@ public class CassandraWriterTest {
             RequestToken request = (RequestToken) inputToken.get(place200.getId());
             IToken socket = inputToken.get(place201.getId());
 
-            long effective = (long)requestInterval.sample();
+            long effective = (long) requestInterval.sample();
             //return back to 200 and 201
 //            request.setTimeCost(effective);
 //            outputToken.addToken(request.getOwner(), place200.getId(), request);
@@ -164,28 +163,29 @@ public class CassandraWriterTest {
         transition100.setTransferFunction(inputToken -> {
             OutputToken outputToken = new OutputToken();
             RequestToken request = (RequestToken) inputToken.get(place100.getId());
-            INode coordinatorNode = request.getOwner();
+            INode owner = request.getOwner();
             HashToken hashToken = (HashToken) inputToken.get(storage101.getId());
             List<INode> toNodes = hashToken.getNodes();
 
             long effective = (long) lookupTimeCost2.sample();
             toNodes.forEach(to -> {
-                if (to.equals(coordinatorNode)) {
+                if (to.equals(owner)) {
                     WriteToken toWrite = new WriteToken(request.getId(), request.getKey(), request.getValue());
                     toWrite.setTimeCost(effective);
-                    toWrite.setFrom(coordinatorNode);
-                    outputToken.addToken(to, place106.getId(), toWrite);
+                    toWrite.setFrom(owner);
+                    outputToken.addToken(owner, place106.getId(), toWrite);
                 } else {
                     MessageToken toSend = new MessageToken(request.getId(), request.getKey(), request.getValue(), TokenType.WRITE);
                     toSend.setTimeCost(effective);
-                    outputToken.addToken(to, place102.getId(), toSend);
+                    toSend.setTo(to);
+                    outputToken.addToken(owner, place102.getId(), toSend);
                 }
             });
 
             CallBackToken callBack = new CallBackToken(request.getId(), request.getConsistency());
             callBack.setTimeCost(effective);
             callBack.setFrom(request.getFrom());
-            outputToken.addToken(coordinatorNode, place103.getId(), callBack);
+            outputToken.addToken(owner, place103.getId(), callBack);
 
             return outputToken;
         });
@@ -237,7 +237,7 @@ public class CassandraWriterTest {
         storage108.setReplaceStrategy((addedToken, originalToken) -> {
             WriteToken writeToken1 = (WriteToken) addedToken;
             WriteToken writeToken2 = (WriteToken) originalToken;
-            //return writeToken1.getKey().equals(writeToken2.getKey());
+            //return writeToken1.getKey().equals(writeToken2.getKey());TODO
             return false;
         });
 
@@ -295,6 +295,7 @@ public class CassandraWriterTest {
             AckToken ack = (AckToken) inputToken.get(place109.getId());
             MessageToken toSend = new MessageToken(ack.getRid(), null, null, TokenType.ACK);
             toSend.setTimeCost(0);
+            toSend.setTo(ack.getFrom());
             outputToken.addToken(ack.getOwner(), place102.getId(), toSend);
 
             return outputToken;
@@ -382,7 +383,7 @@ public class CassandraWriterTest {
 //            return outputToken;
 //        });
 
-        Place place111 =  new Place(112, "network partition signal", PlaceType.LOCAL);
+        Place place111 = new Place(112, "network partition signal", PlaceType.LOCAL);
 
         Transition transition111 = new Transition(111, "partition", TransitionType.LOCAL);
         transition111.addInContainer(place104).addInContainer(place111);
@@ -401,20 +402,12 @@ public class CassandraWriterTest {
         serverCPN.addRecoverer(recoverer109);
         instance.addCpn(serverCPN, servers);
 
-        ITransitionMonitor transitionMonitor=(time,owner, transitionId, transitionName, inputToken, outputToken)->{
+        ITransitionMonitor transitionMonitor = (time, owner, transitionId, transitionName, inputToken, outputToken) -> {
             System.out.println("test----------");
-            logger.info(()->String.format("[%d] owner %s executes %d (%s)", time, owner, transitionId, transitionName));
+            logger.info(() -> String.format("[%d] owner %s executes %d (%s)", time, owner, transitionId, transitionName));
         };
-        serverCPN.getTransitions().forEach((tid, transition)->instance.addMonitor(tid, transitionMonitor));
+        serverCPN.getTransitions().forEach((tid, transition) -> instance.addMonitor(tid, transitionMonitor));
         instance.setMaximumExecutionTime(1000000L * Integer.valueOf(System.getProperty("maxTime", "100")));//us
-
-             /*   new ITransitionMonitor() {
-            @Override
-            public void reportWhenFiring(
-            INode owner, int transitionId, String transitionName, InputToken inputToken, OutputToken outputToken) {
-
-            }
-        };*/
     }
 
     @Test

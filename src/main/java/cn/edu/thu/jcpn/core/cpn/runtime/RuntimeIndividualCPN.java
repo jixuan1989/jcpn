@@ -52,7 +52,7 @@ public class RuntimeIndividualCPN {
 
     private RuntimeFoldingCPN foldingCPN;
 
-    private GlobalClock globalClock=GlobalClock.getInstance();
+    private GlobalClock globalClock = GlobalClock.getInstance();
 
     RuntimeIndividualCPN(INode owner, RuntimeFoldingCPN foldingCPN) {
         this.owner = owner;
@@ -95,8 +95,7 @@ public class RuntimeIndividualCPN {
         if (container instanceof Place) {
             Place place = (Place) container;
             containers.put(place.getId(), new RuntimePlace(owner, place));
-        }
-        else {
+        } else {
             Storage storage = (Storage) container;
             containers.put(storage.getId(), new RuntimeStorage(owner, storage));
         }
@@ -248,7 +247,7 @@ public class RuntimeIndividualCPN {
         enableRecoverers.forEach(recoverer -> {
             Map<IToken, Map<Integer, List<IToken>>> tokenToPidTokens = recoverer.execute();
             tokenToPidTokens.forEach((token, pidTokens) ->
-                pidTokens.forEach((pid, tokens) -> reportAfterTokensAdded(pid, tokens, recoverer))
+                    pidTokens.forEach((pid, tokens) -> reportAfterTokensAdded(pid, tokens, recoverer))
             );
         });
     }
@@ -299,7 +298,7 @@ public class RuntimeIndividualCPN {
         if (!transitionMonitors.containsKey(transition.getId())) return;
 
         ITransitionMonitor monitor = transitionMonitors.get(transition.getId());
-        monitor.reportWhenFiring(globalClock.getTime(),owner, transition.getId(), transition.getName(), inputToken, outputToken);
+        monitor.reportWhenFiring(globalClock.getTime(), owner, transition.getId(), transition.getName(), inputToken, outputToken);
     }
 
     private Map<TokenType, Map<INode, Collection<IToken>>> getPidAllTokens(int pid) {

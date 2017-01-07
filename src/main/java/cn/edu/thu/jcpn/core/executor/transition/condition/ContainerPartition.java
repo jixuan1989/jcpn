@@ -34,6 +34,7 @@ public class ContainerPartition extends TreeSet<Integer> {
         this.forEach(cid ->
                 priorityCids.computeIfAbsent(priorities.get(cid), obj -> new ArrayList<>()).add(cid));
 
+        cids.clear(); //TODO fix.
         priorityCids.values().forEach(cids::addAll);
     }
 

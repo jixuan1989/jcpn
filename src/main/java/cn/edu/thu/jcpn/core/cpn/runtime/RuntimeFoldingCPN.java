@@ -179,7 +179,7 @@ public class RuntimeFoldingCPN {
 
         logger.trace(() -> String.format("Run %s events... %s", eventType.toString(), nodes));
         //System.out.println(String.format("Run %s events... %s", eventType.toString(), nodes));
-        nodes.forEach(node -> runACPNInstance(getIndividualCPN(node))); //parallelStream
+        nodes.parallelStream().forEach(node -> runACPNInstance(getIndividualCPN(node)));
         return true;
     }
 
