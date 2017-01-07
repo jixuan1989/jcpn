@@ -21,6 +21,8 @@ public class RuntimeFoldingCPN {
 
     private static Logger logger = LogManager.getLogger();
 
+    private String version;
+
     private Set<CPN> cpns;
     private List<INode> nodes;
     private Map<INode, RuntimeIndividualCPN> nodeIndividualCPNs;
@@ -40,6 +42,14 @@ public class RuntimeFoldingCPN {
 
         this.globalClock = GlobalClock.getInstance();
         this.maximumExecutionTime = Long.MAX_VALUE;
+    }
+
+    public String getVersion() {
+        return version;
+    }
+
+    public void setVersion(String version) {
+        this.version = version;
     }
 
     public Set<CPN> getCpns() {

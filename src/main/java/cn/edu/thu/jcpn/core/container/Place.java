@@ -47,7 +47,7 @@ public class Place implements IContainer {
         this.id = id;
     }
 
-    public Place(int id, String name) {
+    private Place(int id, String name) {
         this(id);
         this.name = name;
     }

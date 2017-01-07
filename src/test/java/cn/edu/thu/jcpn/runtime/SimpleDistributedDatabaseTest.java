@@ -4,9 +4,11 @@ import cn.edu.thu.jcpn.core.cpn.CPN;
 import cn.edu.thu.jcpn.core.cpn.runtime.RuntimeFoldingCPN;
 import cn.edu.thu.jcpn.core.monitor.ITransitionMonitor;
 import cn.edu.thu.jcpn.core.container.Place;
+import cn.edu.thu.jcpn.core.container.Place.PlaceType;
 import cn.edu.thu.jcpn.core.runtime.GlobalClock;
 import cn.edu.thu.jcpn.core.runtime.tokens.*;
 import cn.edu.thu.jcpn.core.executor.transition.Transition;
+import cn.edu.thu.jcpn.core.executor.transition.Transition.TransitionType;
 import cn.edu.thu.jcpn.core.executor.transition.condition.OutputToken;
 import cn.edu.thu.jcpn.elements.token.MessageToken;
 import org.apache.logging.log4j.LogManager;
@@ -37,20 +39,20 @@ public class SimpleDistributedDatabaseTest {
     public void initSimpleDistributedDatabase() {
 
         cpn = new CPN("simpleDD");
-        cpn.setVersion("1.0");
 
-        Place place1 = new Place(1, "local");
-        Place place2 = new Place(2, "received");
-        Place place3 = new Place(3, "toSend");
-        Place place4 = new Place(4, "socket");
+
+        Place place1 = new Place(1, "local", PlaceType.LOCAL);
+        Place place2 = new Place(2, "received", PlaceType.LOCAL);
+        Place place3 = new Place(3, "toSend", PlaceType.COMMUNICATING);
+        Place place4 = new Place(4, "socket", PlaceType.COMMUNICATING);
 
         int PID_1 = 1;
         int PID_2 = 2;
         int PID_3 = 3;
         int PID_4 = 4;
 
-        Transition transition1 = new Transition(1, "execute");
-        Transition transition2 = new Transition(2, "transmit");
+        Transition transition1 = new Transition(1, "execute", TransitionType.LOCAL);
+        Transition transition2 = new Transition(2, "transmit", TransitionType.TRANSMIT);
 
         transition1.addInContainer(place1).addInContainer(place2);
         transition1.addOutContainer(place1).addOutContainer(place3);
@@ -110,6 +112,8 @@ public class SimpleDistributedDatabaseTest {
         cpn.addContainers(place1, place2, place3, place4);
         cpn.addTransitions(transition1, transition2);
         instance = new RuntimeFoldingCPN();
+        instance.setVersion("1.0");
+
         instance.addCpn(cpn, nodes);
 
         ITransitionMonitor transitionMonitor = (owner, transitionId, transitionName, inputToken, outputToken) -> System.out.println( owner + "'s " + transitionName + " is fired");

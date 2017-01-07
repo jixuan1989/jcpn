@@ -18,7 +18,6 @@ public class CPN {
 
     private int id;
     private String name;
-    private String version;
 
     private Map<Integer, IContainer> containers;
     private Map<Integer, Transition> transitions;
@@ -39,14 +38,6 @@ public class CPN {
 
     public String getName() {
         return name;
-    }
-
-    public String getVersion() {
-        return version;
-    }
-
-    public void setVersion(String version) {
-        this.version = version;
     }
 
     public Map<Integer, IContainer> getContainers() {

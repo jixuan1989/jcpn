@@ -12,9 +12,8 @@ public class WriteToken extends IToken {
     private String key;
     private String value;
 
-    public WriteToken(int rid, String key, String value, long effective) {
+    public WriteToken(int rid, String key, String value) {
         super();
-        super.setTimeCost(effective);
         this.rid = rid;
         this.key = key;
         this.value = value;

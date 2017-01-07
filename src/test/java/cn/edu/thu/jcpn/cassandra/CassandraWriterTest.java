@@ -6,6 +6,7 @@ import cn.edu.thu.jcpn.core.cpn.CPN;
 import cn.edu.thu.jcpn.core.cpn.runtime.RuntimeFoldingCPN;
 import cn.edu.thu.jcpn.core.container.Place;
 import cn.edu.thu.jcpn.core.container.Place.PlaceType;
+import cn.edu.thu.jcpn.core.executor.recoverer.Recoverer;
 import cn.edu.thu.jcpn.core.executor.transition.condition.ContainerPartition;
 import cn.edu.thu.jcpn.core.runtime.tokens.INode;
 import cn.edu.thu.jcpn.core.runtime.tokens.IToken;
@@ -15,10 +16,13 @@ import cn.edu.thu.jcpn.core.container.Storage;
 import cn.edu.thu.jcpn.core.executor.transition.Transition;
 import cn.edu.thu.jcpn.core.executor.transition.condition.InputToken;
 import cn.edu.thu.jcpn.core.executor.transition.condition.OutputToken;
+import org.apache.commons.math3.distribution.UniformRealDistribution;
 import org.apache.commons.math3.random.EmpiricalDistribution;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.junit.Before;
+import org.junit.Test;
+import org.junit.runner.Request;
 
 import java.io.FileReader;
 import java.io.IOException;
@@ -27,10 +31,8 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-import static cn.edu.thu.jcpn.core.container.Place.PlaceType.COMMUNICATING;
-import static cn.edu.thu.jcpn.core.container.Place.PlaceType.LOCAL;
-import static cn.edu.thu.jcpn.core.executor.transition.Transition.TransitionType.TRANSMIT;
-
+import static cn.edu.thu.jcpn.core.container.Place.PlaceType;
+import static cn.edu.thu.jcpn.core.executor.transition.Transition.TransitionType;
 /**
  * Created by leven on 2016/12/25.
  */
@@ -52,10 +54,10 @@ public class CassandraWriterTest {
     public void initCassandraWriter() throws IOException {
 
         instance = new RuntimeFoldingCPN();
-
+        instance.setVersion("1.0");
         //time cost distributions
         Properties distributions = new Properties();
-        distributions.load(new FileReader(System.getProperty("distributions", "configs/empiricalDistribution")));
+        distributions.load(new FileReader(System.getProperty("distributions", "examples/cassandra/configs/empiricalDistribution")));
         distributions.forEach((key, value) ->
                 empiricalDistributions.put(key, Arrays.stream(value.toString().split(",")).mapToDouble(Double::valueOf).toArray())
         );
@@ -68,55 +70,55 @@ public class CassandraWriterTest {
         writeTimeCost2.load((double[]) empiricalDistributions.get("write_locally"));
         EmpiricalDistribution syncTimeCost2 = new EmpiricalDistribution(100);
         syncTimeCost2.load((double[]) empiricalDistributions.get("write_response"));
-
+        UniformRealDistribution requestInterval = new UniformRealDistribution(10, 12);
         /**************************************************************************************************************/
 
         CPN clientCPN = new CPN("clientCPN");
-        clientCPN.setVersion("1.0");
 
         List<INode> clients = IntStream.rangeClosed(1, CLIENT_NUMBER).
                 mapToObj(x -> new StringNode("client" + x)).collect(Collectors.toList());
-        Place place20 = new Place(20, "client", LOCAL);
-        Place place21 = new Place(21, "network resources", COMMUNICATING);
 
-        Place place1 = new Place(1, "request", LOCAL);
+        Place place200 = new Place(200, "client", PlaceType.LOCAL);
+        Place place201 = new Place(201, "network resources", PlaceType.COMMUNICATING);
 
-        Transition transition20 = new Transition(20, "make request", TRANSMIT);
-        transition20.setTransferFunction(inputToken -> {
+        Place place100 = new Place(100, "request", PlaceType.LOCAL);
+
+        Transition transition200 = new Transition(200, "make request", TransitionType.TRANSMIT);
+        transition200.setTransferFunction(inputToken -> {
             OutputToken outputToken = new OutputToken();
 
-            RequestToken request = (RequestToken) inputToken.get(place20.getId());
-            IToken socket = inputToken.get(place21.getId());
+            RequestToken request = (RequestToken) inputToken.get(place200.getId());
+            IToken socket = inputToken.get(place201.getId());
 
-            request.setTimeCost(1);
-            outputToken.addToken(request.getOwner(), place20.getId(), request);
-
-            socket.setTimeCost(1);
-            outputToken.addToken(socket.getOwner(), place21.getId(), socket);
+            long effective = (long)requestInterval.sample();
+            //return back to 200 and 201
+            request.setTimeCost(effective);
+            outputToken.addToken(request.getOwner(), place200.getId(), request);
+            socket.setTimeCost(effective);
+            outputToken.addToken(socket.getOwner(), place201.getId(), socket);
 
             RequestToken received = new RequestToken(request.getKey(), request.getValue(), request.getConsistency());
             received.setFrom(socket.getOwner());
-            received.setTimeCost(1);
-            outputToken.addToken(socket.getTo(), place1.getId(), received);
+            received.setTimeCost(effective);
+            outputToken.addToken(socket.getTo(), place100.getId(), received);
 
             return outputToken;
         });
 
-        clientCPN.addContainers(place20, place21);
-        clientCPN.addTransitions(transition20);
+        clientCPN.addContainers(place200, place201);
+        clientCPN.addTransitions(transition200);
         instance.addCpn(clientCPN, clients);
 
         /**************************************************************************************************************/
 
         CPN serverCPN = new CPN("serverCPN");
-        clientCPN.setVersion("1.0");
 
         List<INode> servers = IntStream.rangeClosed(1, SERVER_NUMBER).
                 mapToObj(x -> new StringNode("server" + x)).collect(Collectors.toList());
 
-        Storage place2 = new Storage(1, "lookup table");
+        Storage storage101 = new Storage(101, "lookup table");
         List<INode> cooperateNodes = new ArrayList<>();
-        // initial tokens in place2
+        // initial tokens in the storage 101, and place 104
         List<IToken> hashTable = new ArrayList<>();
         for (int i = 0; i < SERVER_NUMBER; ++i) {
             cooperateNodes.clear();
@@ -125,34 +127,35 @@ public class CassandraWriterTest {
             }
             hashTable.add(new HashToken(i, new ArrayList<>(cooperateNodes)));
         }
-        servers.forEach(node -> place2.addInitTokens(node, hashTable));
+        servers.forEach(node -> storage101.addInitTokens(node, hashTable));
 
-        Transition transition1 = new Transition(1, "schedule");
-        transition1.addInContainer(place1).addInContainer(place2);
-        ContainerPartition partition1 = new ContainerPartition(place1.getId(), place2.getId());
-        transition1.addCondition(partition1, inputToken -> {
-            RequestToken request = (RequestToken) inputToken.get(place1.getId());
-            HashToken hashToken = (HashToken) inputToken.get(place2.getId());
+        Place place104 = new Place(104, "network resources", PlaceType.COMMUNICATING);
+        servers.forEach(owner -> servers.stream().filter(to -> !to.equals(owner)).forEach(to ->
+                place104.addInitToken(null, owner, to, new UnitToken())
+        ));
+
+
+        Transition transition100 = new Transition(100, "schedule", TransitionType.LOCAL);
+        transition100.addInContainer(place100).addInContainer(storage101);
+        ContainerPartition partition1 = new ContainerPartition(place100.getId(), storage101.getId());
+        transition100.addCondition(partition1, inputToken -> {
+            RequestToken request = (RequestToken) inputToken.get(place100.getId());
+            HashToken hashToken = (HashToken) inputToken.get(storage101.getId());
             int hashCode = request.getKey().hashCode() % SERVER_NUMBER;
             return hashCode == hashToken.getHashCode();
         });
 
-        Place place3 = new Place(3, "sending queue", PlaceType.COMMUNICATING);
-        Place place4 = new Place(4, "callback", LOCAL);
+        Place place102 = new Place(102, "sending queue", PlaceType.COMMUNICATING);
+        Place place103 = new Place(103, "callback", PlaceType.LOCAL);
 
-        Place place5 = new Place(5, "network resources", PlaceType.COMMUNICATING);
-        servers.forEach(owner -> servers.stream().filter(to -> !to.equals(owner)).forEach(to ->
-                place5.addInitToken(null, owner, to, new UnitToken())
-        ));
+        Place place105 = new Place(105, "received message", PlaceType.LOCAL);
+        Place place106 = new Place(106, "writing queue", PlaceType.LOCAL);
 
-        Place place6 = new Place(6, "received message", LOCAL);
-        Place place7 = new Place(7, "writing queue", LOCAL);
-
-        transition1.addOutContainer(place3).addOutContainer(place4).addOutContainer(place7);
-        transition1.setTransferFunction(inputToken -> {
+        transition100.addOutContainer(place102).addOutContainer(place103).addOutContainer(place106);
+        transition100.setTransferFunction(inputToken -> {
             OutputToken outputToken = new OutputToken();
-            RequestToken request = (RequestToken) inputToken.get(place1.getId());
-            INode cooperatorNode = request.getOwner();
+            RequestToken request = (RequestToken) inputToken.get(place100.getId());
+            INode coordinatorNode = request.getOwner();
             int hashCode = request.getKey().hashCode() % SERVER_NUMBER;
 
             HashToken hashToken = (HashToken) inputToken.get(hashCode);
@@ -160,196 +163,245 @@ public class CassandraWriterTest {
 
             long effective = (long) lookupTimeCost2.sample();
             toNodes.forEach(to -> {
-                if (to.equals(cooperatorNode)) {
-                    WriteToken toWrite = new WriteToken(request.getId(), request.getKey(), request.getValue(), effective);
-                    toWrite.setFrom(cooperatorNode);
-                    outputToken.addToken(to, place7.getId(), toWrite);
+                if (to.equals(coordinatorNode)) {
+                    WriteToken toWrite = new WriteToken(request.getId(), request.getKey(), request.getValue());
+                    toWrite.setTimeCost(effective);
+                    toWrite.setFrom(coordinatorNode);
+                    outputToken.addToken(to, place106.getId(), toWrite);
                 } else {
-                    MessageToken toSend = new MessageToken(request.getId(), request.getKey(), request.getValue(), TokenType.WRITE, effective);
-                    outputToken.addToken(to, place3.getId(), toSend);
+                    MessageToken toSend = new MessageToken(request.getId(), request.getKey(), request.getValue(), TokenType.WRITE);
+                    toSend.setTimeCost(effective);
+                    outputToken.addToken(to, place102.getId(), toSend);
                 }
             });
-            outputToken.addToken(cooperatorNode, place4.getId(), new CallBackToken(request.getId(), request.getConsistency(), effective));
+
+            CallBackToken callBack = new CallBackToken(request.getId(), request.getConsistency());
+            callBack.setTimeCost(effective);
+            callBack.setFrom(request.getFrom());
+            outputToken.addToken(coordinatorNode, place103.getId(), callBack);
 
             return outputToken;
         });
 
-        Transition transition2 = new Transition(2, "transmit");
-        transition2.addInContainer(place3).addInContainer(place5);
-        transition2.addOutContainer(place5).addOutContainer(place6);
-        transition2.setTransferFunction(inputToken -> {
+        Transition transition101 = new Transition(101, "transmit", TransitionType.TRANSMIT);
+        transition101.addInContainer(place102).addInContainer(place104);
+        transition101.addOutContainer(place104).addOutContainer(place105);
+        transition101.setTransferFunction(inputToken -> {
+            long effective = (long) internalNetworkTimeCost2.sample();
             OutputToken outputToken = new OutputToken();
-            MessageToken toSend = (MessageToken) inputToken.get(place3.getId());
-            MessageToken received = new MessageToken(toSend.getRid(), toSend.getKey(), toSend.getValue(), toSend.getType(), (long) internalNetworkTimeCost2.sample());
+            MessageToken toSend = (MessageToken) inputToken.get(place102.getId());
+            MessageToken received = new MessageToken(toSend.getRid(), toSend.getKey(), toSend.getValue(), toSend.getType());
+            received.setTimeCost(effective);
             received.setFrom(toSend.getOwner());
-            outputToken.addToken(toSend.getTo(), place6.getId(), received);
+            outputToken.addToken(toSend.getTo(), place105.getId(), received);
 
-            IToken socket = inputToken.get(place5.getId());
-            outputToken.addToken(socket.getOwner(), place5.getId(), socket);
+            IToken socket = inputToken.get(place104.getId());
+            socket.setTimeCost(effective);
+            outputToken.addToken(socket.getOwner(), place104.getId(), socket);
 
             return outputToken;
         });
 
-        Transition transition3 = new Transition(3, "enter writing queue");
-        transition3.addInContainer(place6);
-        ContainerPartition partition2 = new ContainerPartition(place6.getId());
-        transition3.addCondition(partition2, inputToken -> {
-            MessageToken received = (MessageToken) inputToken.get(place6.getId());
+        Transition transition102 = new Transition(102, "enter writing queue", TransitionType.LOCAL);
+        transition102.addInContainer(place105);
+        ContainerPartition partition2 = new ContainerPartition(place105.getId());
+        transition102.addCondition(partition2, inputToken -> {
+            MessageToken received = (MessageToken) inputToken.get(place105.getId());
             return TokenType.WRITE.equals(received.getType());
         });
 
-        transition3.addOutContainer(place7);
-        transition3.setTransferFunction(inputToken -> {
+        transition102.addOutContainer(place106);
+        transition102.setTransferFunction(inputToken -> {
             OutputToken outputToken = new OutputToken();
-            MessageToken received = (MessageToken) inputToken.get(place6.getId());
+            MessageToken received = (MessageToken) inputToken.get(place105.getId());
 
-            WriteToken toWrite = new WriteToken(received.getRid(), received.getKey(), received.getValue(), 0);
+            WriteToken toWrite = new WriteToken(received.getRid(), received.getKey(), received.getValue());
+            toWrite.setTimeCost(0);
             toWrite.setFrom(received.getFrom());
-            outputToken.addToken(received.getOwner(), place7.getId(), toWrite);
+            outputToken.addToken(received.getOwner(), place106.getId(), toWrite);
 
             return outputToken;
         });
 
-        Transition transition4 = new Transition(4, "write");
-        transition4.addInContainer(place7);
+        Transition transition103 = new Transition(103, "write", TransitionType.LOCAL);
+        transition103.addInContainer(place106);
 
-        Place place8 = new Place(8, "data store");
-        Place place9 = new Place(9, "ack queue");
+        Storage storage108 = new Storage(108, "data store");
+        storage108.setReplaceStrategy((addedToken, originalToken) -> {
+            WriteToken writeToken1 = (WriteToken) addedToken;
+            WriteToken writeToken2 = (WriteToken) originalToken;
+            return writeToken1.getKey().equals(writeToken2.getKey());
+        });
 
-        transition4.addOutContainer(place8).addOutContainer(place9);
-        transition4.setTransferFunction(inputToken -> {
+        Place place109 = new Place(109, "ack queue", PlaceType.LOCAL);
+
+        transition103.addOutContainer(storage108).addOutContainer(place109);
+        transition103.setTransferFunction(inputToken -> {
             long effective = (long) writeTimeCost2.sample();
             OutputToken outputToken = new OutputToken();
-            WriteToken toWrite = (WriteToken) inputToken.get(place7.getId());
+            WriteToken toWrite = (WriteToken) inputToken.get(place106.getId());
             toWrite.setTimeCost(effective);
-            outputToken.addToken(toWrite.getOwner(), place8.getId(), toWrite);
+            outputToken.addToken(toWrite.getOwner(), storage108.getId(), toWrite);
 
-            AckToken ack = new AckToken(toWrite.getRid(), effective);
+            AckToken ack = new AckToken(toWrite.getRid());
+            ack.setTimeCost(effective);
             ack.setFrom(toWrite.getFrom());
-            outputToken.addToken(toWrite.getOwner(), place9.getId(), ack);
+            outputToken.addToken(toWrite.getOwner(), place109.getId(), ack);
 
             return outputToken;
         });
 
-        Transition transition5 = new Transition(5, "handle local ack");
-        transition5.addInContainer(place4).addInContainer(place9);
-        ContainerPartition partition3 = new ContainerPartition(place4.getId(), place9.getId());
-        transition5.addCondition(partition3, inputToken -> {
-            CallBackToken callback = (CallBackToken) inputToken.get(place4.getId());
-            AckToken ack = (AckToken) inputToken.get(place9.getId());
+        Transition transition104 = new Transition(104, "handle local ack", TransitionType.LOCAL);
+        transition104.addInContainer(place103).addInContainer(place109);
+        ContainerPartition partition3 = new ContainerPartition(place103.getId(), place109.getId());
+        transition104.addCondition(partition3, inputToken -> {
+            CallBackToken callback = (CallBackToken) inputToken.get(place103.getId());
+            AckToken ack = (AckToken) inputToken.get(place109.getId());
 
             return ack.isLocal() && ack.getRid() == callback.getRid();
         });
 
-        transition5.addOutContainer(place4);
+        transition104.addOutContainer(place103);
         Function<InputToken, OutputToken> ackFunction = (inputToken) -> {
             OutputToken outputToken = new OutputToken();
-            CallBackToken callback = (CallBackToken) inputToken.get(place4.getId());
+            CallBackToken callback = (CallBackToken) inputToken.get(place103.getId());
             callback.ack();
             callback.setTimeCost((long) syncTimeCost2.sample());
-            outputToken.addToken(callback.getOwner(), place4.getId(), callback);
+            outputToken.addToken(callback.getOwner(), place103.getId(), callback);
 
             return outputToken;
         };
-        transition5.setTransferFunction(ackFunction);
+        transition104.setTransferFunction(ackFunction);
 
-        Transition transition6 = new Transition(6, "enter sending queue");
-        transition6.addInContainer(place9);
-        ContainerPartition partition4 = new ContainerPartition(place9.getId());
-        transition6.addCondition(partition4, inputToken -> {
-            AckToken ack = (AckToken) inputToken.get(place9.getId());
+        Transition transition105 = new Transition(105, "enter sending queue", TransitionType.LOCAL);
+        transition105.addInContainer(place109);
+        ContainerPartition partition4 = new ContainerPartition(place109.getId());
+        transition105.addCondition(partition4, inputToken -> {
+            AckToken ack = (AckToken) inputToken.get(place109.getId());
             return !ack.isLocal();
         });
 
-        transition6.addOutContainer(place3);
-        transition6.setTransferFunction(inputToken -> {
+        transition105.addOutContainer(place102);
+        transition105.setTransferFunction(inputToken -> {
             OutputToken outputToken = new OutputToken();
-            AckToken ack = (AckToken) inputToken.get(place9.getId());
-            MessageToken toSend = new MessageToken(ack.getRid(), null, null, TokenType.ACK, 0);
-            outputToken.addToken(ack.getOwner(), place3.getId(), toSend);
+            AckToken ack = (AckToken) inputToken.get(place109.getId());
+            MessageToken toSend = new MessageToken(ack.getRid(), null, null, TokenType.ACK);
+            toSend.setTimeCost(0);
+            outputToken.addToken(ack.getOwner(), place102.getId(), toSend);
 
             return outputToken;
         });
 
-        Place place10 = new Place(10, "ack queue");
 
-        Transition transition7 = new Transition(7, "enter ack queue");
-        transition7.addInContainer(place6);
-        ContainerPartition partition5 = new ContainerPartition(place6.getId());
-        transition7.addCondition(partition5, inputToken -> {
-            MessageToken received = (MessageToken) inputToken.get(place6.getId());
+        Transition transition106 = new Transition(106, "enter ack queue", TransitionType.LOCAL);
+        transition106.addInContainer(place105);
+        ContainerPartition partition5 = new ContainerPartition(place105.getId());
+        transition106.addCondition(partition5, inputToken -> {
+            MessageToken received = (MessageToken) inputToken.get(place105.getId());
             return TokenType.ACK.equals(received.getType());
         });
 
-        transition7.addOutContainer(place10);
-        transition7.setTransferFunction(inputToken -> {
+        Place place107 = new Place(107, "ack queue", PlaceType.LOCAL);
+
+        transition106.addOutContainer(place107);
+        transition106.setTransferFunction(inputToken -> {
             OutputToken outputToken = new OutputToken();
-            MessageToken received = (MessageToken) inputToken.get(place6.getId());
-            AckToken ack = new AckToken(received.getRid(), 0);
-            outputToken.addToken(received.getOwner(), place10.getId(), ack);
+            MessageToken received = (MessageToken) inputToken.get(place105.getId());
+            AckToken ack = new AckToken(received.getRid());
+            ack.setTimeCost(0);
+            outputToken.addToken(received.getOwner(), place107.getId(), ack);
 
             return outputToken;
         });
 
-        Transition transition8 = new Transition(8, "handle remote ack");
-        transition8.addInContainer(place4).addInContainer(place10);
-        ContainerPartition partition6 = new ContainerPartition(place4.getId(), place10.getId());
-        transition8.addCondition(partition6, inputToken -> {
-            CallBackToken callback = (CallBackToken) inputToken.get(place4.getId());
-            AckToken ack = (AckToken) inputToken.get(place10.getId());
+        Transition transition107 = new Transition(107, "handle remote ack", TransitionType.LOCAL);
+        transition107.addInContainer(place103).addInContainer(place107);
+        ContainerPartition partition6 = new ContainerPartition(place103.getId(), place107.getId());
+        transition107.addCondition(partition6, inputToken -> {
+            CallBackToken callback = (CallBackToken) inputToken.get(place103.getId());
+            AckToken ack = (AckToken) inputToken.get(place107.getId());
             return ack.getRid() == callback.getRid();
         });
 
-        transition8.addOutContainer(place4);
-        transition8.setTransferFunction(ackFunction);
+        transition107.addOutContainer(place103);
+        transition107.setTransferFunction(ackFunction);
 
-        Transition transition9 = new Transition(9, "finish");
-        transition9.addInContainer(place4);
-        transition9.setPriority(499);
-        ContainerPartition partition7 = new ContainerPartition(place4.getId());
-        transition9.addCondition(partition7, inputToken -> {
-            CallBackToken callBack = (CallBackToken) inputToken.get(place4.getId());
+        Transition transition108 = new Transition(108, "finish", TransitionType.LOCAL);
+        transition108.addInContainer(place103);
+        transition108.setPriority(499);//TODO
+        ContainerPartition partition7 = new ContainerPartition(place103.getId());
+        transition108.addCondition(partition7, inputToken -> {
+            CallBackToken callBack = (CallBackToken) inputToken.get(place103.getId());
             return callBack.getCallback() <= 0;
         });
 
-        Place place11 = new Place(11, "response", LOCAL);
-        transition9.addOutContainer(place11);
-        transition9.setTransferFunction(inputToken -> {
+        Place place110 = new Place(110, "response", PlaceType.LOCAL);
+        transition108.addOutContainer(place110);
+        transition108.setTransferFunction(inputToken -> {
             OutputToken outputToken = new OutputToken();
-            CallBackToken callBack = (CallBackToken) inputToken.get(place4.getId());
-            ResponseToken response = new ResponseToken(callBack.getRid(), ResponseType.SUCCESS, 0);
-            outputToken.addToken(callBack.getOwner(), place11.getId(), response);
+            CallBackToken callBack = (CallBackToken) inputToken.get(place103.getId());
+            ResponseToken response = new ResponseToken(callBack.getRid(), ResponseType.SUCCESS);
+            response.setTimeCost(0);
+            response.setFrom(callBack.getFrom());
+            outputToken.addToken(callBack.getOwner(), place110.getId(), response);
 
             return outputToken;
         });
 
-        // Here, timeout is another concept beside the timeout mechanism discussed before.
-        //  In this situation, timeout process is defined by the user and has its specific process method,
-        //  and its way to consume the input tokens and produce output tokens.
-        //  On the contrary, in our concept, timeout transition just move the original token a timeout place.
-        Transition transition10 = new Transition(10, "timeout");
-        transition10.addInContainer(place4);
-        transition10.setPriority(499);
-        transition10.addOutContainer(place11);
-        transition10.setTransferFunction(inputToken -> {
-            OutputToken outputToken = new OutputToken();
-            CallBackToken callBack = (CallBackToken) inputToken.get(place4.getId());
-            ResponseToken response = new ResponseToken(callBack.getRid(), ResponseType.TIMEOUT, 0);
-            outputToken.addToken(callBack.getOwner(), place11.getId(), response);
+        Recoverer recoverer109 = new Recoverer(109, "timeout");
+        recoverer109.addInPlace(place103);
+        recoverer109.addOutContainer(place110);
+        recoverer109.setTransferFunction(token -> {
+            Map<Integer, List<IToken>> outputToken = new HashMap<>();
+            CallBackToken callBack = (CallBackToken) token;
+            ResponseToken response = new ResponseToken(callBack.getRid(), ResponseType.TIMEOUT);
+            response.setTimeCost(0);
+            response.setFrom(callBack.getFrom());
+            outputToken.put(place110.getId(), Collections.singletonList(response));
 
             return outputToken;
         });
 
-        Place place12 = new Place(12, "network partition signal");
+        Transition transition110 = new Transition(110, "transmit", TransitionType.TRANSMIT);
+        transition110.addInContainer(place110);
+        transition110.addOutContainer(place200);
+        transition110.setTransferFunction(inputToken -> {
+            OutputToken outputToken = new OutputToken();
+            ResponseToken response = (ResponseToken) inputToken.get(place110.getId());
+            RequestToken request = new RequestToken("random me","random me",2);//TODO
+            outputToken.addToken(response.getFrom(), place200.getId(), request);
 
-        Transition transition11 = new Transition(11, "network partition");
-        transition11.addInContainer(place5).addInContainer(place12);
+            return outputToken;
+        });
 
-        clientCPN.addContainers(place1, place2, place3, place4, place5, place6, place7, place8, place9, place10, place11, place12);
-        clientCPN.addTransitions(transition1, transition2, transition3, transition4, transition5, transition6,
-                transition7, transition8, transition9, transition10, transition11);
+        Place place111 =  new Place(112, "network partition signal", PlaceType.LOCAL);
+
+        Transition transition111 = new Transition(111, "partition", TransitionType.LOCAL);
+        transition111.addInContainer(place104).addInContainer(place111);
+        ContainerPartition partition8 = new ContainerPartition(place104.getId(), place111.getId());
+        transition111.addCondition(partition8, inputToken -> {
+            SignalToken signal = (SignalToken) inputToken.get(place111.getId());
+            IToken socket = inputToken.get(place104.getId());
+
+            return signal.getSignal().equals(socket.getTo());
+        });
+
+
+        clientCPN.addContainers(place100, storage101, place102, place103, place104, place105, place106, storage108, place109, place107, place110, place111);
+        clientCPN.addTransitions(transition100, transition101, transition102, transition103, transition104, transition105,
+                transition106, transition107, transition108, transition111);
+        clientCPN.addRecoverer(recoverer109);
         instance = new RuntimeFoldingCPN();
         instance.addCpn(clientCPN, servers);
         instance.setMaximumExecutionTime(1000000L * Integer.valueOf(System.getProperty("maxTime", "100")));//us
+    }
+
+    @Test
+    public void test0() throws InterruptedException {
+        int count = 0;
+        while (instance.hasNextTime()) {
+            instance.nextRound();
+            if (count++ == 666) break;
+        }
     }
 }

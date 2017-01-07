@@ -6,6 +6,7 @@ import cn.edu.thu.jcpn.core.runtime.tokens.INode;
 import cn.edu.thu.jcpn.core.runtime.tokens.IToken;
 
 import java.util.*;
+import java.util.function.BiPredicate;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
@@ -15,7 +16,7 @@ public class RuntimeStorage implements IRuntimeContainer {
     private String name;
     protected INode owner;
 
-    private Predicate<IToken> replaceStrategy;
+    private BiPredicate<IToken, IToken> replaceStrategy;
 
     private List<IToken> availableTokens;
     private List<IToken> futureTokens;
@@ -57,7 +58,7 @@ public class RuntimeStorage implements IRuntimeContainer {
         return futureTokens;
     }
 
-    public Predicate<IToken> getReplaceStrategy() {
+    public BiPredicate<IToken, IToken> getReplaceStrategy() {
         return replaceStrategy;
     }
 
@@ -69,7 +70,11 @@ public class RuntimeStorage implements IRuntimeContainer {
 
     public void addToken(IToken token) {
         if (null == token) return;
-
+        if(replaceStrategy!=null) {
+            Collection<IToken> removed = availableTokens.stream().
+                    filter(availableToken -> replaceStrategy.test(token, availableToken)).collect(Collectors.toList());
+            availableTokens.removeAll(removed);
+        }
         if (token.getTime() > globalClock.getTime()) {
             futureTokens.add(token);
         } else {

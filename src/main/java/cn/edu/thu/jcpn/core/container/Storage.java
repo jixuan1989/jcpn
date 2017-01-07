@@ -4,6 +4,7 @@ import cn.edu.thu.jcpn.core.runtime.tokens.INode;
 import cn.edu.thu.jcpn.core.runtime.tokens.IToken;
 
 import java.util.*;
+import java.util.function.BiPredicate;
 import java.util.function.Predicate;
 
 public class Storage implements IContainer {
@@ -12,7 +13,7 @@ public class Storage implements IContainer {
     private String name;
 
     private Map<INode, List<IToken>> initTokens;
-    private Predicate<IToken> replaceStrategy;
+    private BiPredicate<IToken, IToken> replaceStrategy;
 
     private Storage() {
     }
@@ -49,11 +50,16 @@ public class Storage implements IContainer {
         initTokens.computeIfAbsent(owner, obj -> new ArrayList<>()).add(token);
     }
 
-    public Predicate<IToken> getReplaceStrategy() {
+    public BiPredicate<IToken, IToken> getReplaceStrategy() {
         return replaceStrategy;
     }
 
-    public void setReplaceStrategy(Predicate<IToken> replaceStrategy) {
+    /**
+     *
+     * @param replaceStrategy a pair of tokens, the left is the token that you want to added,
+     *                        the right is the token that existed in the Storage.
+     */
+    public void setReplaceStrategy(BiPredicate<IToken, IToken> replaceStrategy) {
         this.replaceStrategy = replaceStrategy;
     }
 

@@ -45,7 +45,7 @@ public class Transition {
         this.type = LOCAL;
     }
 
-    public Transition(int id, String name) {
+    private Transition(int id, String name) {
         this();
         this.id = id;
         this.name = name;
