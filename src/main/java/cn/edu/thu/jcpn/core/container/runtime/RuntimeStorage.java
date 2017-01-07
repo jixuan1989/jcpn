@@ -7,7 +7,6 @@ import cn.edu.thu.jcpn.core.runtime.tokens.IToken;
 
 import java.util.*;
 import java.util.function.BiPredicate;
-import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 public class RuntimeStorage implements IRuntimeContainer {
@@ -93,7 +92,7 @@ public class RuntimeStorage implements IRuntimeContainer {
 
     public void logStatus() {
         StringBuilder sb = new StringBuilder();
-        sb.append("\t\tNewly:");
+        sb.append("\t\tAvailable:");
         if (availableTokens.size() > 0) {
             availableTokens.forEach(token -> sb.append("\t" + token.toString()));
         }

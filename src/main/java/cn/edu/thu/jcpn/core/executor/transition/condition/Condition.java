@@ -1,5 +1,7 @@
 package cn.edu.thu.jcpn.core.executor.transition.condition;
 
+import cn.edu.thu.jcpn.core.runtime.tokens.IToken;
+
 import java.util.*;
 import java.util.Map.Entry;
 import java.util.function.Predicate;
@@ -37,6 +39,7 @@ public class Condition {
                     }
                 })
         );
+        partitions.add(partition);
 
         // key. all relative partitions combine into one partition.
         ContainerPartition combinedPartition = ContainerPartition.combine(partitions);
@@ -45,7 +48,10 @@ public class Condition {
 
         // for each partition to be combined, remove from the original map.
         // then combine multi-maps into one map.
-        partitions.forEach(containerPartition -> combinedPredicates.putAll(predicateItems.remove(containerPartition)));
+        partitions.forEach(containerPartition -> {
+            Map<ContainerPartition, List<Predicate<InputToken>>> removed = predicateItems.remove(containerPartition);
+            if (null != removed && !removed.isEmpty()) combinedPredicates.putAll(removed);
+        });
         predicateItems.put(combinedPartition, combinedPredicates);
 
         combinedPredicates.computeIfAbsent(partition.clone(), obj -> new ArrayList<>()).add(predicate);

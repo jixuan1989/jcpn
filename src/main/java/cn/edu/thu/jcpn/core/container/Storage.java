@@ -5,7 +5,6 @@ import cn.edu.thu.jcpn.core.runtime.tokens.IToken;
 
 import java.util.*;
 import java.util.function.BiPredicate;
-import java.util.function.Predicate;
 
 public class Storage implements IContainer {
 

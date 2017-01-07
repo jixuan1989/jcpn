@@ -153,7 +153,7 @@ public class RuntimeTransition implements IRuntimeExecutor {
     private void findAndSave(ContainerPartition partition, InputToken tokenSet, List<InputToken> availableTokens, int position) {
         List<Integer> cids = partition.getCids();
         if (position == cids.size()) {
-            if (position + 1 == tokenSet.size() && condition.test(partition, tokenSet) && containNew(partition, tokenSet)) {
+            if (position == tokenSet.size() && condition.test(partition, tokenSet) && containNew(partition, tokenSet)) {
                 availableTokens.add(new InputToken(tokenSet));
             }
             return;

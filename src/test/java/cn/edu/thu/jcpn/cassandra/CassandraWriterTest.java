@@ -22,7 +22,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.junit.Before;
 import org.junit.Test;
-import org.junit.runner.Request;
 
 import java.io.FileReader;
 import java.io.IOException;
@@ -31,7 +30,6 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-import static cn.edu.thu.jcpn.core.container.Place.PlaceType;
 import static cn.edu.thu.jcpn.core.executor.transition.Transition.TransitionType;
 /**
  * Created by leven on 2016/12/25.
@@ -40,11 +38,11 @@ public class CassandraWriterTest {
 
     private static Logger logger = LogManager.getLogger();
 
-    private static int SERVER_NUMBER = 5;
-    private static int CLIENT_NUMBER = 20;
-    private static int CONTROLLER_NUMBER = 1;
+    private static int SERVER_NUMBER = 1;
+    private static int CLIENT_NUMBER = 1;
 
-    private static int REPLICA = 3;
+    private static int REPLICA = 1;
+    private static int CONSISTENCY = 1;
 
     private RuntimeFoldingCPN instance;
 
@@ -81,8 +79,13 @@ public class CassandraWriterTest {
         List<INode> servers = IntStream.rangeClosed(1, SERVER_NUMBER).
                 mapToObj(x -> new StringNode("server" + x)).collect(Collectors.toList());
 
+
+
+
         Place place200 = new Place(200, "request", PlaceType.LOCAL);
-        clients.forEach(client -> place200.addInitToken(client, new RequestToken("key", "value", 2)));
+        for (int i = 0; i < 10; ++i) {
+            clients.forEach(client -> place200.addInitToken(client, new RequestToken("key", "value", CONSISTENCY)));
+        }
 
         Place place201 = new Place(201, "network resources", PlaceType.COMMUNICATING);
         clients.forEach(client -> servers.forEach(server -> place201.addInitToken(null, client, server, new UnitToken())));
@@ -100,8 +103,8 @@ public class CassandraWriterTest {
 
             long effective = (long)requestInterval.sample();
             //return back to 200 and 201
-            request.setTimeCost(effective);
-            outputToken.addToken(request.getOwner(), place200.getId(), request);
+//            request.setTimeCost(effective);
+//            outputToken.addToken(request.getOwner(), place200.getId(), request);
             socket.setTimeCost(effective);
             outputToken.addToken(socket.getOwner(), place201.getId(), socket);
 
@@ -112,8 +115,6 @@ public class CassandraWriterTest {
 
             return outputToken;
         });
-
-
 
         clientCPN.addContainers(place200, place201);
         clientCPN.addTransitions(transition200);
@@ -163,9 +164,10 @@ public class CassandraWriterTest {
             OutputToken outputToken = new OutputToken();
             RequestToken request = (RequestToken) inputToken.get(place100.getId());
             INode coordinatorNode = request.getOwner();
-            int hashCode = request.getKey().hashCode() % SERVER_NUMBER;
-
-            HashToken hashToken = (HashToken) inputToken.get(hashCode);
+//            int hashCode = request.getKey().hashCode() % SERVER_NUMBER;
+//
+//            HashToken hashToken = (HashToken) inputToken.get(hashCode);
+            HashToken hashToken = (HashToken) inputToken.get(storage101.getId());
             List<INode> toNodes = hashToken.getNodes();
 
             long effective = (long) lookupTimeCost2.sample();
@@ -237,7 +239,8 @@ public class CassandraWriterTest {
         storage108.setReplaceStrategy((addedToken, originalToken) -> {
             WriteToken writeToken1 = (WriteToken) addedToken;
             WriteToken writeToken2 = (WriteToken) originalToken;
-            return writeToken1.getKey().equals(writeToken2.getKey());
+            //return writeToken1.getKey().equals(writeToken2.getKey());
+            return false;
         });
 
         Place place109 = new Place(109, "ack queue", PlaceType.LOCAL);
