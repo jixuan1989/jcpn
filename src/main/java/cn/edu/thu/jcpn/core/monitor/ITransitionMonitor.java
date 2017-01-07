@@ -1,8 +1,8 @@
 package cn.edu.thu.jcpn.core.monitor;
 
 import cn.edu.thu.jcpn.core.runtime.tokens.INode;
-import cn.edu.thu.jcpn.core.transition.condition.InputToken;
-import cn.edu.thu.jcpn.core.transition.condition.OutputToken;
+import cn.edu.thu.jcpn.core.executor.transition.condition.InputToken;
+import cn.edu.thu.jcpn.core.executor.transition.condition.OutputToken;
 
 /**
  * Created by leven on 2016/12/24.

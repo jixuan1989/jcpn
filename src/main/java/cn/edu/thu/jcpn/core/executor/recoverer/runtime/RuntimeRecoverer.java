@@ -1,11 +1,12 @@
-package cn.edu.thu.jcpn.core.recoverer.runtime;
+package cn.edu.thu.jcpn.core.executor.recoverer.runtime;
 
-import cn.edu.thu.jcpn.core.monitor.IExecutor;
-import cn.edu.thu.jcpn.core.container.place.RuntimePlace;
+import cn.edu.thu.jcpn.core.container.runtime.IRuntimeContainer;
+import cn.edu.thu.jcpn.core.executor.IRuntimeExecutor;
+import cn.edu.thu.jcpn.core.container.runtime.RuntimePlace;
 import cn.edu.thu.jcpn.core.runtime.GlobalClock;
 import cn.edu.thu.jcpn.core.runtime.tokens.INode;
 import cn.edu.thu.jcpn.core.runtime.tokens.IToken;
-import cn.edu.thu.jcpn.core.recoverer.Recoverer;
+import cn.edu.thu.jcpn.core.executor.recoverer.Recoverer;
 
 import java.util.HashMap;
 import java.util.List;
@@ -16,35 +17,35 @@ import java.util.function.Function;
 /**
  * Created by leven on 2017/1/4.
  */
-public class RuntimeRecoverer implements IExecutor {
+public class RuntimeRecoverer implements IRuntimeExecutor {
 
     private int id;
     private String name;
     private INode owner;
 
     private RuntimePlace inPlace;
-    private Map<Integer, RuntimePlace> outPlaces;
+    private Map<Integer, IRuntimeContainer> outContainers;
 
     private Function<IToken, Map<Integer, List<IToken>>> transferFunction;
 
     private GlobalClock globalClock;
 
-    public RuntimeRecoverer(INode owner, Recoverer timeoutTransition,
-                            Map<Integer, RuntimePlace> runtimePlaces) {
+    public RuntimeRecoverer(INode owner, Recoverer recoverer,
+                            Map<Integer, IRuntimeContainer> runtimeContainers) {
         this.owner = owner;
-        this.id = timeoutTransition.getId();
-        this.name = timeoutTransition.getName();
+        this.id = recoverer.getId();
+        this.name = recoverer.getName();
 
-        int inPid = timeoutTransition.getInPlace().getId();
-        this.inPlace = runtimePlaces.get(inPid);
+        int inPid = recoverer.getInPlace().getId();
+        this.inPlace = (RuntimePlace) runtimeContainers.get(inPid);
 
-        Set<Integer> outPids = timeoutTransition.getOutPlaces().keySet();
-        this.outPlaces = new HashMap<>();
-        outPids.forEach(pid -> this.outPlaces.put(pid, runtimePlaces.get(pid)));
+        Set<Integer> outCids = recoverer.getOutContainers().keySet();
+        this.outContainers = new HashMap<>();
+        outCids.forEach(cid -> this.outContainers.put(cid, runtimeContainers.get(cid)));
 
-        this.transferFunction = timeoutTransition.getTransferFunction();
+        this.transferFunction = recoverer.getTransferFunction();
 
-        globalClock = GlobalClock.getInstance();
+        this.globalClock = GlobalClock.getInstance();
     }
 
     @Override
@@ -69,27 +70,27 @@ public class RuntimeRecoverer implements IExecutor {
      * recover the timeout tokens and then clean up the timeout tokens' queue.
      */
     public Map<IToken, Map<Integer, List<IToken>>> execute() {
-        Map<IToken, Map<Integer, List<IToken>>> tokenToPidTokens = new HashMap<>();
+        Map<IToken, Map<Integer, List<IToken>>> tokenToCidTokens = new HashMap<>();
         List<IToken> timeouts = this.inPlace.getTimeoutTokens();
         timeouts.forEach(token -> {
-            Map<Integer, List<IToken>> toPidTokens = transferFunction.apply(token);
-            tokenToPidTokens.put(token, toPidTokens);
-            handleOutput(toPidTokens);
+            Map<Integer, List<IToken>> toCidTokens = transferFunction.apply(token);
+            tokenToCidTokens.put(token, toCidTokens);
+            handleOutput(toCidTokens);
         });
         timeouts.clear();
 
-        return tokenToPidTokens;
+        return tokenToCidTokens;
     }
 
     /**
      * For each item of the toPidTokens, add the tokens to the specific place according
      * to the pid. Then register an event for each of the tokens.
      *
-     * @param toPidTokens
+     * @param toCidTokens
      */
-    private void handleOutput(Map<Integer, List<IToken>> toPidTokens) {
-        toPidTokens.forEach((pid, tokens) -> {
-            outPlaces.get(pid).addTokens(tokens);
+    private void handleOutput(Map<Integer, List<IToken>> toCidTokens) {
+        toCidTokens.forEach((cid, tokens) -> {
+            outContainers.get(cid).addTokens(tokens);
             tokens.forEach(this::registerEvents);
         });
     }

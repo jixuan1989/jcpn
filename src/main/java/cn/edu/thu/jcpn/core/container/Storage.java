@@ -1,4 +1,4 @@
-package cn.edu.thu.jcpn.core.container.storage;
+package cn.edu.thu.jcpn.core.container;
 
 import cn.edu.thu.jcpn.core.runtime.tokens.INode;
 import cn.edu.thu.jcpn.core.runtime.tokens.IToken;
@@ -6,7 +6,7 @@ import cn.edu.thu.jcpn.core.runtime.tokens.IToken;
 import java.util.*;
 import java.util.function.Predicate;
 
-public class Storage {
+public class Storage implements IContainer {
 
     private int id;
     private String name;

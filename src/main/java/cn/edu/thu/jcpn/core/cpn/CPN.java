@@ -1,8 +1,9 @@
 package cn.edu.thu.jcpn.core.cpn;
 
-import cn.edu.thu.jcpn.core.container.place.Place;
-import cn.edu.thu.jcpn.core.recoverer.Recoverer;
-import cn.edu.thu.jcpn.core.transition.Transition;
+import cn.edu.thu.jcpn.core.container.IContainer;
+import cn.edu.thu.jcpn.core.container.Place;
+import cn.edu.thu.jcpn.core.executor.recoverer.Recoverer;
+import cn.edu.thu.jcpn.core.executor.transition.Transition;
 
 import java.util.Arrays;
 import java.util.HashMap;
@@ -18,13 +19,16 @@ public class CPN {
     private int id;
     private String name;
     private String version;
-    private Map<Integer, Place> places;
+
+    private Map<Integer, IContainer> containers;
     private Map<Integer, Transition> transitions;
     private Map<Integer, Recoverer> recoverers;
 
-    public CPN() {
+    public CPN(String name) {
         this.id = count++;
-        this.places = new HashMap<>();
+        this.name = name;
+
+        this.containers = new HashMap<>();
         this.transitions = new HashMap<>();
         this.recoverers = new HashMap<>();
     }
@@ -33,16 +37,8 @@ public class CPN {
         return id;
     }
 
-    public void setId(int id) {
-        this.id = id;
-    }
-
     public String getName() {
         return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
     }
 
     public String getVersion() {
@@ -53,28 +49,20 @@ public class CPN {
         this.version = version;
     }
 
-    public Map<Integer, Place> getPlaces() {
-        return places;
+    public Map<Integer, IContainer> getContainers() {
+        return containers;
     }
 
-    public void setPlaces(Map<Integer, Place> places) {
-        this.places = places;
+    public void addContainers(IContainer... containers) {
+        Arrays.stream(containers).forEach(this::addContainer);
     }
 
-    public Place getPlace(int placeId) {
-        return places.get(placeId);
+    public void addContainer(IContainer container) {
+        containers.put(container.getId(), container);
     }
 
-    public void addPlace(Place place) {
-        places.put(place.getId(), place);
-    }
-
-    public void addPlaces(Place... places) {
-        Arrays.stream(places).forEach(this::addPlace);
-    }
-
-    public Place removePlace(int pid) {
-        return places.remove(pid);
+    public IContainer getContainer(int cid) {
+        return containers.get(cid);
     }
 
     public Map<Integer, Transition> getTransitions() {
@@ -85,16 +73,12 @@ public class CPN {
         this.transitions = transitions;
     }
 
-    public void addTransition(Transition transition) {
-        transitions.put(transition.getId(), transition);
-    }
-
     public void addTransitions(Transition... transitions) {
         Arrays.stream(transitions).forEach(this::addTransition);
     }
 
-    public Transition removeTransition(int tid) {
-        return transitions.remove(tid);
+    public void addTransition(Transition transition) {
+        transitions.put(transition.getId(), transition);
     }
 
     public Map<Integer, Recoverer> getRecoverers() {
@@ -105,15 +89,11 @@ public class CPN {
         this.recoverers = recoverers;
     }
 
-    public void addRecoverer(Recoverer recoverer) {
-        recoverers.put(recoverer.getId(), recoverer);
-    }
-
     public void addRecoverers(Recoverer... recoverers) {
         Arrays.stream(recoverers).forEach(this::addRecoverer);
     }
 
-    public Recoverer removeRecoverer(int rid) {
-        return recoverers.remove(rid);
+    public void addRecoverer(Recoverer recoverer) {
+        recoverers.put(recoverer.getId(), recoverer);
     }
 }

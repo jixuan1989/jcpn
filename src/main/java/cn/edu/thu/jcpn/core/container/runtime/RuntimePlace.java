@@ -1,5 +1,6 @@
-package cn.edu.thu.jcpn.core.container.place;
+package cn.edu.thu.jcpn.core.container.runtime;
 
+import cn.edu.thu.jcpn.core.container.Place;
 import cn.edu.thu.jcpn.core.runtime.GlobalClock;
 import cn.edu.thu.jcpn.core.runtime.tokens.INode;
 import cn.edu.thu.jcpn.core.runtime.tokens.IToken;
@@ -8,7 +9,7 @@ import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.stream.Collectors;
 
-public class RuntimePlace {
+public class RuntimePlace implements IRuntimeContainer {
 
     private int id;
     private String name;
@@ -52,7 +53,7 @@ public class RuntimePlace {
         this.addTokens(place.getTokensByOwner(this.owner));
     }
 
-    public Integer getId() {
+    public int getId() {
         return id;
     }
 
@@ -215,13 +216,17 @@ public class RuntimePlace {
 
     public void logStatus() {
         StringBuilder sb = new StringBuilder();
-        sb.append("\t\tNewly:");
-        if (newlyTokens.size() > 0) {
-            newlyTokens.forEach(token -> sb.append("\t" + token.toString()));
+        sb.append("\t\tTimeout:");
+        if (timeoutTokens.size() > 0) {
+            timeoutTokens.forEach(token -> sb.append("\t" + token.toString()));
         }
         sb.append("\n\t\tTested:");
         if (testedTokens.size() > 0) {
             testedTokens.forEach(token -> sb.append("\t" + token.toString()));
+        }
+        sb.append("\n\t\tNewly:");
+        if (newlyTokens.size() > 0) {
+            newlyTokens.forEach(token -> sb.append("\t" + token.toString()));
         }
         sb.append("\n\t\tFuture:");
         if (futureTokens.size() > 0) {

@@ -1,4 +1,4 @@
-package cn.edu.thu.jcpn.core.container.place;
+package cn.edu.thu.jcpn.core.container;
 
 import cn.edu.thu.jcpn.core.runtime.tokens.INode;
 import cn.edu.thu.jcpn.core.runtime.tokens.IToken;
@@ -8,10 +8,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static cn.edu.thu.jcpn.core.container.place.Place.PlaceStrategy.*;
-import static cn.edu.thu.jcpn.core.container.place.Place.PlaceType.*;
+import static cn.edu.thu.jcpn.core.container.Place.PlaceStrategy.*;
+import static cn.edu.thu.jcpn.core.container.Place.PlaceType.*;
 
-public class Place {
+public class Place implements IContainer {
 
     private int id;
     private String name;

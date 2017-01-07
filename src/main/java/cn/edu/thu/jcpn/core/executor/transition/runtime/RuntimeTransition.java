@@ -1,19 +1,21 @@
-package cn.edu.thu.jcpn.core.transition.runtime;
+package cn.edu.thu.jcpn.core.executor.transition.runtime;
 
+import cn.edu.thu.jcpn.core.container.IContainer;
+import cn.edu.thu.jcpn.core.container.runtime.IRuntimeContainer;
+import cn.edu.thu.jcpn.core.container.runtime.RuntimeStorage;
 import cn.edu.thu.jcpn.core.cpn.runtime.RuntimeFoldingCPN;
 import cn.edu.thu.jcpn.core.cpn.runtime.RuntimeIndividualCPN;
-import cn.edu.thu.jcpn.core.monitor.IExecutor;
-import cn.edu.thu.jcpn.core.container.place.Place;
+import cn.edu.thu.jcpn.core.executor.IRuntimeExecutor;
+import cn.edu.thu.jcpn.core.executor.transition.condition.ContainerPartition;
 import cn.edu.thu.jcpn.core.runtime.tokens.INode;
-import cn.edu.thu.jcpn.core.container.place.RuntimePlace;
+import cn.edu.thu.jcpn.core.container.runtime.RuntimePlace;
 import cn.edu.thu.jcpn.core.runtime.GlobalClock;
 import cn.edu.thu.jcpn.core.runtime.tokens.IToken;
-import cn.edu.thu.jcpn.core.transition.Transition;
-import cn.edu.thu.jcpn.core.transition.Transition.TransitionType;
-import cn.edu.thu.jcpn.core.transition.condition.Condition;
-import cn.edu.thu.jcpn.core.transition.condition.InputToken;
-import cn.edu.thu.jcpn.core.transition.condition.OutputToken;
-import cn.edu.thu.jcpn.core.transition.condition.PlacePartition;
+import cn.edu.thu.jcpn.core.executor.transition.Transition;
+import cn.edu.thu.jcpn.core.executor.transition.Transition.TransitionType;
+import cn.edu.thu.jcpn.core.executor.transition.condition.Condition;
+import cn.edu.thu.jcpn.core.executor.transition.condition.InputToken;
+import cn.edu.thu.jcpn.core.executor.transition.condition.OutputToken;
 
 import java.util.*;
 import java.util.Map.Entry;
@@ -27,7 +29,7 @@ import java.util.stream.Collectors;
  * and gets the inputToken from the transition's cache. Then, the inputToken is used to fire the transition.
  * After that, the relative input tokens are removed from all relative transitions' caches and the original places.
  */
-public class RuntimeTransition implements IExecutor {
+public class RuntimeTransition implements IRuntimeExecutor {
 
     protected INode owner;
     private int id;
@@ -38,24 +40,22 @@ public class RuntimeTransition implements IExecutor {
     private Condition condition;
     private Function<InputToken, OutputToken> transferFunction;
 
-    private Map<Integer, Integer> inPidPriorities;
+    private Map<Integer, Integer> inCidPriorities;
+    private Map<Integer, IRuntimeContainer> inContainers;
+    // <to, <id, container>>
+    private Map<INode, Map<Integer, IRuntimeContainer>> outContainers;
 
-    private Map<Integer, RuntimePlace> inPlaces;
-
-    // <to, <pid, place>>
-    private Map<INode, Map<Integer, RuntimePlace>> outPlaces;
-
-    private Map<PlacePartition, List<InputToken>> cache;
+    private Map<ContainerPartition, List<InputToken>> cache;
 
     /**
-     * Only use for fetch the place of tokens' targets.
+     * Only use to generate target places of remote nodes.
      */
     private RuntimeFoldingCPN foldingCPN;
 
     private GlobalClock globalClock;
 
-    public RuntimeTransition(INode owner, Transition transition, Map<Integer, RuntimePlace>
-            runtimePlaces, RuntimeFoldingCPN foldingCPN) {
+    public RuntimeTransition(INode owner, Transition transition, Map<Integer, IRuntimeContainer>
+            runtimeContainers, RuntimeFoldingCPN foldingCPN) {
         this.owner = owner;
         this.id = transition.getId();
         this.name = transition.getName();
@@ -64,10 +64,11 @@ public class RuntimeTransition implements IExecutor {
         this.priority = transition.getPriority();
         this.condition = transition.getCondition();
 
-        this.inPidPriorities = transition.getInPidPriorities();
-        this.inPlaces = new HashMap<>();
-        this.outPlaces = new HashMap<>();
-        initInPlaces(transition.getInPlaces(), runtimePlaces);
+        this.inCidPriorities = transition.getInCidPriorities();
+        this.inContainers = new HashMap<>();
+        this.outContainers = new HashMap<>();
+
+        initInContainers(transition.getInContainers(), runtimeContainers);
         initCache();
 
         this.foldingCPN = foldingCPN;
@@ -75,27 +76,27 @@ public class RuntimeTransition implements IExecutor {
         this.globalClock = GlobalClock.getInstance();
     }
 
-    private void initInPlaces(Map<Integer, Place> places, Map<Integer, RuntimePlace> runtimePlaces) {
-        places.keySet().forEach(pid -> this.inPlaces.put(pid, runtimePlaces.get(pid)));
+    private void initInContainers(Map<Integer, IContainer> containers, Map<Integer, IRuntimeContainer> runtimeContainers) {
+        containers.keySet().forEach(cid -> this.inContainers.put(cid, runtimeContainers.get(cid)));
     }
 
     private void initCache() {
         cache = new HashMap<>();
-        Collection<PlacePartition> partitions = condition.getPlacePartition();
-        partitions.forEach(partition -> partition.setPriorities(inPidPriorities));
+        Collection<ContainerPartition> partitions = condition.getContainerPartition();
+        partitions.forEach(partition -> partition.setPriorities(inCidPriorities));
         partitions.forEach(partition -> cache.put(partition, new ArrayList<>()));
-        PlacePartition freePartition = getFreePartition();
-        freePartition.forEach(pid -> {
-            PlacePartition partition = new PlacePartition();
-            partition.add(pid);
-            partition.setPriorities(inPidPriorities);
+        ContainerPartition freePartition = getFreePartition();
+        freePartition.forEach(cid -> {
+            ContainerPartition partition = new ContainerPartition();
+            partition.add(cid);
+            partition.setPriorities(inCidPriorities);
             cache.put(partition, new ArrayList<>());
         });
     }
 
-    private PlacePartition getFreePartition() {
-        PlacePartition completePartition = PlacePartition.generate(inPlaces.values());
-        PlacePartition conditionPartition = PlacePartition.combine(condition.getPlacePartition());
+    private ContainerPartition getFreePartition() {
+        ContainerPartition completePartition = ContainerPartition.generate(inContainers.values());
+        ContainerPartition conditionPartition = ContainerPartition.combine(condition.getContainerPartition());
         return completePartition.subtract(conditionPartition);
     }
 
@@ -119,12 +120,12 @@ public class RuntimeTransition implements IExecutor {
         return condition;
     }
 
-    public Map<Integer, RuntimePlace> getInPlaces() {
-        return inPlaces;
+    public Map<Integer, IRuntimeContainer> getInContainers() {
+        return inContainers;
     }
 
-    public Map<INode, Map<Integer, RuntimePlace>> getOutPlaces() {
-        return outPlaces;
+    public Map<INode, Map<Integer, IRuntimeContainer>> getOutContainers() {
+        return outContainers;
     }
 
     public Function<InputToken, OutputToken> getTransferFunction() {
@@ -139,48 +140,62 @@ public class RuntimeTransition implements IExecutor {
      * <br> (However, this method does not implement it, a CPNInstance class needs to control that)
      */
     public void checkNewlyTokens4Firing() {
-        // for each partition, ask input place for tokens available for the to.
-        cache.keySet().forEach(this::checkNewlyTokens4Firing);
+        // for each partition, get available tokens under the conditions.
+        cache.keySet().forEach(partition -> {
+            List<InputToken> availableTokens = new ArrayList<>();
+            InputToken tokenSet = new InputToken();
+            findAndSave(partition, tokenSet, availableTokens, 0);
+            // Map<INode, Map<ContainerPartition, List<InputToken>>> cache;
+            cache.get(partition).addAll(availableTokens);
+        });
     }
 
-    public void checkNewlyTokens4Firing(PlacePartition partition) {
-        List<InputToken> availableTokens = new ArrayList<>();
-        InputToken tokenSet = new InputToken();
-        findAndSave(partition, tokenSet, availableTokens, 0);
-        // Map<INode, Map<PlacePartition, List<InputToken>>> cache;
-        cache.get(partition).addAll(availableTokens);
-    }
-
-    private void findAndSave(PlacePartition partition, InputToken tokenSet, List<InputToken> availableTokens, int position) {
-        List<Integer> pids = partition.getPids();
-        if (position == pids.size()) {
+    private void findAndSave(ContainerPartition partition, InputToken tokenSet, List<InputToken> availableTokens, int position) {
+        List<Integer> cids = partition.getCids();
+        if (position == cids.size()) {
             if (condition.test(partition, tokenSet) && containNew(partition, tokenSet)) {
                 availableTokens.add(new InputToken(tokenSet));
             }
             return;
         }
 
-        RuntimePlace place = inPlaces.get(pids.get(position));
-        List<IToken> tokens = new ArrayList<>();
-        if (place.hasNewlyTokens()) tokens.addAll(place.getNewlyTokens());
-        tokens.addAll(place.getTestedTokens());
-
+        int cid = cids.get(position);
+        List<IToken> tokens = getTokens(cid);
         for (int i = 0; i < tokens.size(); ++i) {
-            tokenSet.addToken(pids.get(position), tokens.get(i));
+            tokenSet.addToken(cids.get(position), tokens.get(i));
             findAndSave(partition, tokenSet, availableTokens, position + 1);
-            tokenSet.removeToken(pids.get(position));
+            tokenSet.removeToken(cids.get(position));
         }
     }
 
-    private boolean containNew(PlacePartition partition, InputToken inputToken) {
-        for (int pid : partition) {
-            List<IToken> tokens = inPlaces.get(pid).getNewlyTokens();
-            IToken token = inputToken.get(pid);
-            if (tokens.contains(token)) {
-                return true;
-            }
+    private List<IToken> getTokens(int cid) {
+        IRuntimeContainer container = inContainers.get(cid);
+        List<IToken> tokens = new ArrayList<>();
+        if (container instanceof RuntimePlace) {
+            RuntimePlace place = (RuntimePlace) container;
+
+            if (place.hasNewlyTokens()) tokens.addAll(place.getNewlyTokens());
+            tokens.addAll(place.getTestedTokens());
+        }
+        else {
+            RuntimeStorage storage = (RuntimeStorage) container;
+            tokens.addAll(storage.getAvailableTokens());
         }
 
+        return tokens;
+    }
+
+    private boolean containNew(ContainerPartition partition, InputToken inputToken) {
+        for (int pid : partition) {
+            if (inContainers.get(pid) instanceof RuntimePlace) {
+                RuntimePlace place = (RuntimePlace)inContainers.get(pid);
+                List<IToken> tokens = place.getNewlyTokens();
+                IToken token = inputToken.get(pid);
+                if (tokens.contains(token)) {
+                    return true;
+                }
+            }
+        }
         return false;
     }
 
@@ -205,29 +220,29 @@ public class RuntimeTransition implements IExecutor {
         if (null == transferFunction || inputToken.isEmpty()) return null;
         OutputToken outputToken = this.transferFunction.apply(inputToken);
 
-        for (Entry<INode, Map<Integer, List<IToken>>> toPidTokens : outputToken.entrySet()) {
-            INode to = toPidTokens.getKey();
+        for (Entry<INode, Map<Integer, List<IToken>>> toCidTokens : outputToken.entrySet()) {
+            INode to = toCidTokens.getKey();
 
-            for (Entry<Integer, List<IToken>> pidTokens : toPidTokens.getValue().entrySet()) {
-                int pid = pidTokens.getKey();
-                List<IToken> tokens = pidTokens.getValue();
+            for (Entry<Integer, List<IToken>> cidTokens : toCidTokens.getValue().entrySet()) {
+                int cid = cidTokens.getKey();
+                List<IToken> tokens = cidTokens.getValue();
                 tokens.forEach(token -> token.setOwner(to));
-                RuntimePlace toPlace = getOutPlace(to, pid);
-                toPlace.addTokens(tokens);
+                IRuntimeContainer toContainer = getOutContainer(to, cid);
+                toContainer.addTokens(tokens);
                 registerEvents(owner, to, tokens);
             }
         }
         return outputToken;
     }
 
-    private RuntimePlace getOutPlace(INode to, int pid) {
-        Map<Integer, RuntimePlace> toPlaces = outPlaces.computeIfAbsent(to, obj -> new HashMap<>());
-        if (toPlaces.isEmpty() || !toPlaces.containsKey(pid)) {
+    private IRuntimeContainer getOutContainer(INode to, int cid) {
+        Map<Integer, IRuntimeContainer> toContainers = outContainers.computeIfAbsent(to, obj -> new HashMap<>());
+        if (toContainers.isEmpty() || !toContainers.containsKey(cid)) {
             RuntimeIndividualCPN toCPN = foldingCPN.getIndividualCPN(to);
-            RuntimePlace toPlace = toCPN.getPlace(pid);
-            toPlaces.put(pid, toPlace);
+            IRuntimeContainer toContainer = toCPN.getContainer(cid);
+            toContainers.put(cid, toContainer);
         }
-        return toPlaces.get(pid);
+        return toContainers.get(cid);
     }
 
     private void registerEvents(INode owner, INode to, List<IToken> tokens) {
@@ -242,7 +257,7 @@ public class RuntimeTransition implements IExecutor {
         });
     }
 
-    public Map<PlacePartition, List<InputToken>> getAllAvailableTokens() {
+    public Map<ContainerPartition, List<InputToken>> getAllAvailableTokens() {
         return cache;
     }
 
@@ -263,8 +278,8 @@ public class RuntimeTransition implements IExecutor {
     }
 
     private void removeTokenFromCache(int pid, IToken token) {
-        for (Entry<PlacePartition, List<InputToken>> partitionEntry : cache.entrySet()) {
-            PlacePartition partition = partitionEntry.getKey();
+        for (Entry<ContainerPartition, List<InputToken>> partitionEntry : cache.entrySet()) {
+            ContainerPartition partition = partitionEntry.getKey();
             if (!partition.contains(pid)) continue;
 
             List<InputToken> tokenSets = partitionEntry.getValue();

@@ -3,11 +3,11 @@ package cn.edu.thu.jcpn.runtime;
 import cn.edu.thu.jcpn.core.cpn.CPN;
 import cn.edu.thu.jcpn.core.cpn.runtime.RuntimeFoldingCPN;
 import cn.edu.thu.jcpn.core.monitor.ITransitionMonitor;
-import cn.edu.thu.jcpn.core.container.place.Place;
+import cn.edu.thu.jcpn.core.container.Place;
 import cn.edu.thu.jcpn.core.runtime.GlobalClock;
 import cn.edu.thu.jcpn.core.runtime.tokens.*;
-import cn.edu.thu.jcpn.core.transition.Transition;
-import cn.edu.thu.jcpn.core.transition.condition.OutputToken;
+import cn.edu.thu.jcpn.core.executor.transition.Transition;
+import cn.edu.thu.jcpn.core.executor.transition.condition.OutputToken;
 import cn.edu.thu.jcpn.elements.token.MessageToken;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -36,37 +36,27 @@ public class SimpleDistributedDatabaseTest {
     @Before
     public void initSimpleDistributedDatabase() {
 
-        cpn = new CPN();
+        cpn = new CPN("simpleDD");
         cpn.setVersion("1.0");
 
-        Map<Integer, Place> placeMap = new HashMap<>();
-        // global placeId and placeName.
         Place place1 = new Place(1, "local");
-        placeMap.put(1, place1);
         Place place2 = new Place(2, "received");
-        placeMap.put(2, place2);
         Place place3 = new Place(3, "toSend");
-        placeMap.put(3, place3);
         Place place4 = new Place(4, "socket");
-        placeMap.put(4, place4);
 
         int PID_1 = 1;
         int PID_2 = 2;
         int PID_3 = 3;
         int PID_4 = 4;
 
-        Map<Integer, Transition> transitionMap = new HashMap<>();
-        // global transitionId and transitionName.
         Transition transition1 = new Transition(1, "execute");
-        transitionMap.put(1, transition1);
         Transition transition2 = new Transition(2, "transmit");
-        transitionMap.put(2, transition2);
 
-        transition1.addInPlace(place1).addInPlace(place2);
-        transition1.addOutPlace(place1).addOutPlace(place3);
+        transition1.addInContainer(place1).addInContainer(place2);
+        transition1.addOutContainer(place1).addOutContainer(place3);
 
-        transition2.addInPlace(place3).addInPlace(place4);
-        transition2.addOutPlace(place4).addOutPlace(place2);
+        transition2.addInContainer(place3).addInContainer(place4);
+        transition2.addOutContainer(place4).addOutContainer(place2);
 
         nodes = IntStream.rangeClosed(1, SERVER_NUMBER).
                 mapToObj(x -> new StringNode("server" + x)).collect(Collectors.toList());
@@ -117,8 +107,8 @@ public class SimpleDistributedDatabaseTest {
                 }
         );
 
-        cpn.setPlaces(placeMap);
-        cpn.setTransitions(transitionMap);
+        cpn.addContainers(place1, place2, place3, place4);
+        cpn.addTransitions(transition1, transition2);
         instance = new RuntimeFoldingCPN();
         instance.addCpn(cpn, nodes);
 
@@ -132,17 +122,6 @@ public class SimpleDistributedDatabaseTest {
         int count = 0;
         while (instance.hasNextTime()) {
             instance.nextRound();
-
-//            if (count == 5) {
-//                IOwner owner = nodes.get(0);
-//                INode to = nodes.get(1);
-//                IToken token = new MessageToken(owner, to, 1000);
-//                List<IToken> tokens = new ArrayList<>();
-//                tokens.add(token);
-//                RuntimeIndividualCPN instanceIndividualCPN = instance.getIndividualCPN(owner, null);
-//                instanceIndividualCPN.addNewlyTokens(3, tokens);
-//            }
-
             if (count++ == 66) break;
         }
     }

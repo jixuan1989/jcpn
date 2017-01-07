@@ -1,6 +1,7 @@
-package cn.edu.thu.jcpn.core.recoverer;
+package cn.edu.thu.jcpn.core.executor.recoverer;
 
-import cn.edu.thu.jcpn.core.container.place.Place;
+import cn.edu.thu.jcpn.core.container.IContainer;
+import cn.edu.thu.jcpn.core.container.Place;
 import cn.edu.thu.jcpn.core.runtime.tokens.IToken;
 
 import java.util.HashMap;
@@ -14,46 +15,38 @@ public class Recoverer {
     private String name;
 
     private Place inPlace;
-    private Map<Integer, Place> outPlaces;
+    private Map<Integer, IContainer> outContainers;
 
     private Function<IToken, Map<Integer, List<IToken>>> transferFunction;
 
     public Recoverer(int id, String name) {
         this.id = id;
         this.name = name;
-        outPlaces = new HashMap<>();
+        outContainers = new HashMap<>();
     }
 
     public int getId() {
         return id;
     }
 
-    public void setId(int id) {
-        this.id = id;
-    }
-
     public String getName() {
         return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
     }
 
     public Place getInPlace() {
         return inPlace;
     }
 
-    public void setInPlace(Place place) {
+    public void addInPlace(Place place) {
         this.inPlace = inPlace;
     }
 
-    public Map<Integer, Place> getOutPlaces() {
-        return outPlaces;
+    public Map<Integer, IContainer> getOutContainers() {
+        return outContainers;
     }
 
-    public Recoverer addOutPlace(Place place) {
-        outPlaces.put(place.getId(), place);
+    public Recoverer addOutContainer(IContainer container) {
+        outContainers.put(container.getId(), container);
         return this;
     }
 

@@ -1,4 +1,4 @@
-package cn.edu.thu.jcpn.core.transition.condition;
+package cn.edu.thu.jcpn.core.executor.transition.condition;
 
 import cn.edu.thu.jcpn.core.runtime.tokens.IToken;
 
@@ -23,21 +23,21 @@ public class InputToken extends HashMap<Integer, IToken> {
     /**
      * note: if return null, it means this tokenSet does not contain (to, pid)'s tokens.
      *
-     * @param pid
+     * @param cid
      * @return
      */
-    public IToken get(int pid) {
-        return super.get(pid);
+    public IToken get(int cid) {
+        return super.get(cid);
     }
 
     /**
-     * note: if the pid is already exist, execute the value.
+     * note: if the cid is already exist, execute the value.
      *
-     * @param pid
+     * @param cid
      * @param token
      */
-    public void addToken(int pid, IToken token) {
-        super.put(pid, token);
+    public void addToken(int cid, IToken token) {
+        super.put(cid, token);
     }
 
     public InputToken merge(InputToken inputToken) {
@@ -45,8 +45,8 @@ public class InputToken extends HashMap<Integer, IToken> {
         return this;
     }
 
-    public void removeToken(int pid) {
-        super.remove(pid);
+    public void removeToken(int cid) {
+        super.remove(cid);
     }
 
     /**
@@ -56,14 +56,14 @@ public class InputToken extends HashMap<Integer, IToken> {
      * @param partition
      * @return null or a InputToken.
      */
-    public InputToken getByPids(PlacePartition partition) {
+    public InputToken getByCids(ContainerPartition partition) {
         InputToken res = new InputToken();
-        for (int pid : partition) {
-            IToken value = super.get(pid);
+        for (int cid : partition) {
+            IToken value = super.get(cid);
             if (null == value) {
                 return null;
             }
-            res.put(pid, value);
+            res.put(cid, value);
         }
         return res;
     }

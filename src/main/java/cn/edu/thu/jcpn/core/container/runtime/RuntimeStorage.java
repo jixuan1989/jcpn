@@ -1,13 +1,15 @@
-package cn.edu.thu.jcpn.core.container.storage;
+package cn.edu.thu.jcpn.core.container.runtime;
 
+import cn.edu.thu.jcpn.core.container.Storage;
 import cn.edu.thu.jcpn.core.runtime.GlobalClock;
 import cn.edu.thu.jcpn.core.runtime.tokens.INode;
 import cn.edu.thu.jcpn.core.runtime.tokens.IToken;
 
 import java.util.*;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
-public class RuntimeStorage {
+public class RuntimeStorage implements IRuntimeContainer {
 
     private int id;
     private String name;
@@ -30,10 +32,12 @@ public class RuntimeStorage {
         this.availableTokens = new ArrayList<>();
         this.futureTokens = new ArrayList<>();
 
-        globalClock = GlobalClock.getInstance();
+        this.globalClock = GlobalClock.getInstance();
+
+        this.addTokens(storage.getTokensByOwner(this.owner));
     }
 
-    public Integer getId() {
+    public int getId() {
         return id;
     }
 
@@ -71,5 +75,28 @@ public class RuntimeStorage {
         } else {
             availableTokens.add(token);
         }
+    }
+
+    public List<IToken> reassignTokens() {
+        List<IToken> enables = futureTokens.stream().
+                filter(token -> token.getTime() <= globalClock.getTime()).collect(Collectors.toList());
+        futureTokens.removeAll(enables);
+        availableTokens.addAll(enables);
+
+        return new ArrayList<>();
+    }
+
+    public void logStatus() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("\t\tNewly:");
+        if (availableTokens.size() > 0) {
+            availableTokens.forEach(token -> sb.append("\t" + token.toString()));
+        }
+        sb.append("\n\t\tFuture:");
+        if (futureTokens.size() > 0) {
+            futureTokens.forEach(token -> sb.append("\t" + token.toString()));
+        }
+        System.out.println(String.format("\t%d: %s", id, getName()));
+        System.out.println(sb.toString());
     }
 }

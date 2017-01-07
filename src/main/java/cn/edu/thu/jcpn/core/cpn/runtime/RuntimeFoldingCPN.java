@@ -1,16 +1,17 @@
 package cn.edu.thu.jcpn.core.cpn.runtime;
 
 import cn.edu.thu.jcpn.common.Triple;
+import cn.edu.thu.jcpn.core.container.IContainer;
 import cn.edu.thu.jcpn.core.cpn.CPN;
 import cn.edu.thu.jcpn.core.monitor.IPlaceMonitor;
 import cn.edu.thu.jcpn.core.monitor.ITransitionMonitor;
-import cn.edu.thu.jcpn.core.container.place.Place;
+import cn.edu.thu.jcpn.core.container.Place;
 import cn.edu.thu.jcpn.core.runtime.GlobalClock;
 import cn.edu.thu.jcpn.core.runtime.GlobalClock.EventType;
 import cn.edu.thu.jcpn.core.runtime.tokens.INode;
-import cn.edu.thu.jcpn.core.recoverer.Recoverer;
-import cn.edu.thu.jcpn.core.transition.Transition;
-import cn.edu.thu.jcpn.core.transition.runtime.RuntimeTransition;
+import cn.edu.thu.jcpn.core.executor.recoverer.Recoverer;
+import cn.edu.thu.jcpn.core.executor.transition.Transition;
+import cn.edu.thu.jcpn.core.executor.transition.runtime.RuntimeTransition;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -62,12 +63,12 @@ public class RuntimeFoldingCPN {
     }
 
     public void addMonitor(int pid, IPlaceMonitor monitor) {
-        nodeIndividualCPNs.values().stream().filter(individualCPN -> individualCPN.getPlaces().containsKey(pid)).
+        nodeIndividualCPNs.values().stream().filter(individualCPN -> individualCPN.getContainers().containsKey(pid)).
                 forEach(individualCPN -> addMonitor(individualCPN.getOwner(), pid, monitor));
     }
 
     public void addMonitor(INode node, int pid, IPlaceMonitor monitor) {
-        if (!nodeIndividualCPNs.containsKey(node) || !nodeIndividualCPNs.get(node).getPlaces().containsKey(pid))
+        if (!nodeIndividualCPNs.containsKey(node) || !nodeIndividualCPNs.get(node).getContainers().containsKey(pid))
             return;
 
         nodeIndividualCPNs.get(node).addMonitor(pid, monitor);
@@ -100,13 +101,13 @@ public class RuntimeFoldingCPN {
      * @return
      */
     private void compile(CPN cpn, List<INode> nodes) {
-        Collection<Place> places = cpn.getPlaces().values();
+        Collection<IContainer> containers = cpn.getContainers().values();
         Collection<Transition> transitions = cpn.getTransitions().values();
         Collection<Recoverer> recoverers = cpn.getRecoverers().values();
 
         nodes.forEach(node -> {
             RuntimeIndividualCPN individualCPN = new RuntimeIndividualCPN(node, this);
-            individualCPN.construct(places, transitions, recoverers);
+            individualCPN.construct(containers, transitions, recoverers);
             nodeIndividualCPNs.put(node, individualCPN);
 
             globalClock.addAbsoluteTimePointForRemoteHandle(node, 0L);
@@ -173,10 +174,10 @@ public class RuntimeFoldingCPN {
     }
 
     private void runACPNInstance(RuntimeIndividualCPN individualCPN) {
-        individualCPN.neatenPlaces();
+        individualCPN.neatenContainers();
         if (individualCPN.hasEnableRecoverers()) {
             individualCPN.fireAllRecoverers();
-            individualCPN.neatenPlaces();
+            individualCPN.neatenContainers();
         }
 
         individualCPN.notifyTransitions();
