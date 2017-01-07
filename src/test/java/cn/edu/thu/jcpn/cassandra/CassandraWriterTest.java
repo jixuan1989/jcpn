@@ -8,6 +8,7 @@ import cn.edu.thu.jcpn.core.container.Place;
 import cn.edu.thu.jcpn.core.container.Place.PlaceType;
 import cn.edu.thu.jcpn.core.executor.recoverer.Recoverer;
 import cn.edu.thu.jcpn.core.executor.transition.condition.ContainerPartition;
+import cn.edu.thu.jcpn.core.monitor.ITransitionMonitor;
 import cn.edu.thu.jcpn.core.runtime.tokens.INode;
 import cn.edu.thu.jcpn.core.runtime.tokens.IToken;
 import cn.edu.thu.jcpn.core.runtime.tokens.StringNode;
@@ -38,10 +39,10 @@ public class CassandraWriterTest {
 
     private static Logger logger = LogManager.getLogger();
 
-    private static int SERVER_NUMBER = 1;
+    private static int SERVER_NUMBER = 3;
     private static int CLIENT_NUMBER = 1;
 
-    private static int REPLICA = 1;
+    private static int REPLICA = 3;
     private static int CONSISTENCY = 1;
 
     private RuntimeFoldingCPN instance;
@@ -164,9 +165,6 @@ public class CassandraWriterTest {
             OutputToken outputToken = new OutputToken();
             RequestToken request = (RequestToken) inputToken.get(place100.getId());
             INode coordinatorNode = request.getOwner();
-//            int hashCode = request.getKey().hashCode() % SERVER_NUMBER;
-//
-//            HashToken hashToken = (HashToken) inputToken.get(hashCode);
             HashToken hashToken = (HashToken) inputToken.get(storage101.getId());
             List<INode> toNodes = hashToken.getNodes();
 
@@ -401,9 +399,22 @@ public class CassandraWriterTest {
         serverCPN.addTransitions(transition100, transition101, transition102, transition103, transition104, transition105,
                 transition106, transition107, transition108, transition111);
         serverCPN.addRecoverer(recoverer109);
-
         instance.addCpn(serverCPN, servers);
+
+        ITransitionMonitor transitionMonitor=(time,owner, transitionId, transitionName, inputToken, outputToken)->{
+            System.out.println("test----------");
+            logger.info(()->String.format("[%d] owner %s executes %d (%s)", time, owner, transitionId, transitionName));
+        };
+        serverCPN.getTransitions().forEach((tid, transition)->instance.addMonitor(tid, transitionMonitor));
         instance.setMaximumExecutionTime(1000000L * Integer.valueOf(System.getProperty("maxTime", "100")));//us
+
+             /*   new ITransitionMonitor() {
+            @Override
+            public void reportWhenFiring(
+            INode owner, int transitionId, String transitionName, InputToken inputToken, OutputToken outputToken) {
+
+            }
+        };*/
     }
 
     @Test

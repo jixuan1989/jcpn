@@ -9,5 +9,5 @@ import cn.edu.thu.jcpn.core.executor.transition.condition.OutputToken;
  */
 public interface ITransitionMonitor {
 
-    void reportWhenFiring(INode owner, int transitionId, String transitionName, InputToken inputToken, OutputToken outputToken);
+    void reportWhenFiring(long currentTime, INode owner, int transitionId, String transitionName, InputToken inputToken, OutputToken outputToken);
 }

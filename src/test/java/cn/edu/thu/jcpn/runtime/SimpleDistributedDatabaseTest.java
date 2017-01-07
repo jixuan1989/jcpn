@@ -116,7 +116,7 @@ public class SimpleDistributedDatabaseTest {
 
         instance.addCpn(cpn, nodes);
 
-        ITransitionMonitor transitionMonitor = (owner, transitionId, transitionName, inputToken, outputToken) -> System.out.println( owner + "'s " + transitionName + " is fired");
+        ITransitionMonitor transitionMonitor = (time, owner, transitionId, transitionName, inputToken, outputToken) -> System.out.println( owner + "'s " + transitionName + " is fired");
         instance.addMonitor(transition1.getId(),transitionMonitor);
         instance.addMonitor(transition2.getId(),transitionMonitor);
     }

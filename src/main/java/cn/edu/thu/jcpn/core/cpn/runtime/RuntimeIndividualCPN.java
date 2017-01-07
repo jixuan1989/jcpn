@@ -9,6 +9,7 @@ import cn.edu.thu.jcpn.core.monitor.IPlaceMonitor;
 import cn.edu.thu.jcpn.core.executor.IRuntimeExecutor;
 import cn.edu.thu.jcpn.core.monitor.ITransitionMonitor;
 import cn.edu.thu.jcpn.core.container.Place;
+import cn.edu.thu.jcpn.core.runtime.GlobalClock;
 import cn.edu.thu.jcpn.core.runtime.tokens.INode;
 import cn.edu.thu.jcpn.core.runtime.tokens.IToken;
 import cn.edu.thu.jcpn.core.executor.recoverer.Recoverer;
@@ -50,6 +51,8 @@ public class RuntimeIndividualCPN {
     private List<RuntimeRecoverer> enableRecoverers;
 
     private RuntimeFoldingCPN foldingCPN;
+
+    private GlobalClock globalClock=GlobalClock.getInstance();
 
     RuntimeIndividualCPN(INode owner, RuntimeFoldingCPN foldingCPN) {
         this.owner = owner;
@@ -296,7 +299,7 @@ public class RuntimeIndividualCPN {
         if (!transitionMonitors.containsKey(transition.getId())) return;
 
         ITransitionMonitor monitor = transitionMonitors.get(transition.getId());
-        monitor.reportWhenFiring(owner, transition.getId(), transition.getName(), inputToken, outputToken);
+        monitor.reportWhenFiring(globalClock.getTime(),owner, transition.getId(), transition.getName(), inputToken, outputToken);
     }
 
     private Map<TokenType, Map<INode, Collection<IToken>>> getPidAllTokens(int pid) {

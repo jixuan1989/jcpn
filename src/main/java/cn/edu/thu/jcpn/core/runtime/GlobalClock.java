@@ -87,13 +87,13 @@ public class GlobalClock {
     public void logStatus() {
         StringBuilder sb = new StringBuilder();
         timelineForLocalEvents.forEach((time, nodes) -> {
-            sb.append("time: " + time + ", handle local event nodes: ");
+            sb.append("at time " + time + ", will handle local event on nodes: ");
             nodes.forEach(node -> sb.append(node + "\t"));
             sb.append("\n");
         });
 
         timelineForRemoteEvents.forEach((time, nodes) -> {
-            sb.append("time: " + time + ", handle remote event nodes: ");
+            sb.append("at time " + time + ", will handle remote event on nodes: ");
             nodes.forEach(node -> sb.append(node + "\t"));
             sb.append("\n");
         });
