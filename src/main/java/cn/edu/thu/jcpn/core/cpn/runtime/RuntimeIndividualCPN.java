@@ -162,8 +162,10 @@ public class RuntimeIndividualCPN {
         transitions.values().forEach(RuntimeTransition::checkNewlyTokens4Firing);
 
         containers.values().forEach(container -> {
-            RuntimePlace place = (RuntimePlace) container;
-            place.markTokensAsTested();
+            if (container instanceof RuntimePlace) {
+                RuntimePlace place = (RuntimePlace) container;
+                place.markTokensAsTested();
+            }
         });
     }
 

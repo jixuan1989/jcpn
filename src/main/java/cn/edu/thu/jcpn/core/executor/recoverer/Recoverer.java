@@ -38,7 +38,7 @@ public class Recoverer {
     }
 
     public void addInPlace(Place place) {
-        this.inPlace = inPlace;
+        this.inPlace = place;
     }
 
     public Map<Integer, IContainer> getOutContainers() {
