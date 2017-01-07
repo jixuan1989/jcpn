@@ -1,6 +1,6 @@
 package cn.edu.thu.jcpn.core.cpn;
 
-import cn.edu.thu.jcpn.core.place.Place;
+import cn.edu.thu.jcpn.core.container.place.Place;
 import cn.edu.thu.jcpn.core.recoverer.Recoverer;
 import cn.edu.thu.jcpn.core.transition.Transition;
 
@@ -13,16 +13,36 @@ import java.util.Map;
  */
 public class CPN {
 
+    private static int count = 0;
+
+    private int id;
+    private String name;
     private String version;
     private Map<Integer, Place> places;
     private Map<Integer, Transition> transitions;
     private Map<Integer, Recoverer> recoverers;
 
     public CPN() {
-        super();
+        this.id = count++;
         this.places = new HashMap<>();
         this.transitions = new HashMap<>();
         this.recoverers = new HashMap<>();
+    }
+
+    public int getId() {
+        return id;
+    }
+
+    public void setId(int id) {
+        this.id = id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
     }
 
     public String getVersion() {

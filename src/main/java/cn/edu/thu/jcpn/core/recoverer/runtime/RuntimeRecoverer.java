@@ -1,7 +1,7 @@
 package cn.edu.thu.jcpn.core.recoverer.runtime;
 
 import cn.edu.thu.jcpn.core.monitor.IExecutor;
-import cn.edu.thu.jcpn.core.place.runtime.RuntimePlace;
+import cn.edu.thu.jcpn.core.container.place.RuntimePlace;
 import cn.edu.thu.jcpn.core.runtime.GlobalClock;
 import cn.edu.thu.jcpn.core.runtime.tokens.INode;
 import cn.edu.thu.jcpn.core.runtime.tokens.IToken;

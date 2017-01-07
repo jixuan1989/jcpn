@@ -1,6 +1,6 @@
 package cn.edu.thu.jcpn.core.recoverer;
 
-import cn.edu.thu.jcpn.core.place.Place;
+import cn.edu.thu.jcpn.core.container.place.Place;
 import cn.edu.thu.jcpn.core.runtime.tokens.IToken;
 
 import java.util.HashMap;

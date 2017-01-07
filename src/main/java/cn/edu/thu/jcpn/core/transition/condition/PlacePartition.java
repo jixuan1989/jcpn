@@ -1,6 +1,6 @@
 package cn.edu.thu.jcpn.core.transition.condition;
 
-import cn.edu.thu.jcpn.core.place.runtime.RuntimePlace;
+import cn.edu.thu.jcpn.core.container.place.RuntimePlace;
 
 import java.util.*;
 

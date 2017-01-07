@@ -1,7 +1,9 @@
-package cn.edu.thu.jcpn.core.storage;
+package cn.edu.thu.jcpn.core.container.storage;
 
+import cn.edu.thu.jcpn.core.runtime.tokens.INode;
 import cn.edu.thu.jcpn.core.runtime.tokens.IToken;
 
+import java.util.*;
 import java.util.function.Predicate;
 
 public class Storage {
@@ -9,6 +11,7 @@ public class Storage {
     private int id;
     private String name;
 
+    private Map<INode, List<IToken>> initTokens;
     private Predicate<IToken> replaceStrategy;
 
     private Storage() {
@@ -18,6 +21,7 @@ public class Storage {
         this();
         this.id = id;
         this.name = name;
+        initTokens = new HashMap<>();
     }
 
     public int getId() {
@@ -36,11 +40,24 @@ public class Storage {
         this.name = name;
     }
 
+    public void addInitTokens(INode owner, Collection<IToken> tokens) {
+        tokens.forEach(token -> addInitToken(owner, token));
+    }
+
+    public void addInitToken(INode owner, IToken token) {
+        token.setOwner(owner);
+        initTokens.computeIfAbsent(owner, obj -> new ArrayList<>()).add(token);
+    }
+
     public Predicate<IToken> getReplaceStrategy() {
         return replaceStrategy;
     }
 
     public void setReplaceStrategy(Predicate<IToken> replaceStrategy) {
         this.replaceStrategy = replaceStrategy;
+    }
+
+    public List<IToken> getTokensByOwner(INode owner) {
+        return initTokens.get(owner);
     }
 }

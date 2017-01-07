@@ -3,7 +3,7 @@ package cn.edu.thu.jcpn.runtime;
 import cn.edu.thu.jcpn.core.cpn.CPN;
 import cn.edu.thu.jcpn.core.cpn.runtime.RuntimeFoldingCPN;
 import cn.edu.thu.jcpn.core.monitor.ITransitionMonitor;
-import cn.edu.thu.jcpn.core.place.Place;
+import cn.edu.thu.jcpn.core.container.place.Place;
 import cn.edu.thu.jcpn.core.runtime.GlobalClock;
 import cn.edu.thu.jcpn.core.runtime.tokens.*;
 import cn.edu.thu.jcpn.core.transition.Transition;
@@ -119,7 +119,8 @@ public class SimpleDistributedDatabaseTest {
 
         cpn.setPlaces(placeMap);
         cpn.setTransitions(transitionMap);
-        instance = new RuntimeFoldingCPN(cpn, nodes);
+        instance = new RuntimeFoldingCPN();
+        instance.addCpn(cpn, nodes);
 
         ITransitionMonitor transitionMonitor = (owner, transitionId, transitionName, inputToken, outputToken) -> System.out.println( owner + "'s " + transitionName + " is fired");
         instance.addMonitor(transition1.getId(),transitionMonitor);
@@ -128,8 +129,6 @@ public class SimpleDistributedDatabaseTest {
 
     @Test
     public void test0() throws InterruptedException {
-        instance.compile();
-
         int count = 0;
         while (instance.hasNextTime()) {
             instance.nextRound();

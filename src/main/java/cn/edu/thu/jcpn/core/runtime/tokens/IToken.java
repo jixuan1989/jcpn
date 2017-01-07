@@ -9,10 +9,10 @@ import cn.edu.thu.jcpn.core.runtime.GlobalClock;
  */
 public abstract class IToken {
 
+    private static GlobalClock globalClock = GlobalClock.getInstance();
+
     protected INode from;
-
     protected INode owner;
-
     /**
      * If the token is stored in a place whose type is COMMUNICATING, then it can not be null.
      */
@@ -24,9 +24,8 @@ public abstract class IToken {
         this.time = globalClock.getTime();
     }
 
-    private static GlobalClock globalClock = GlobalClock.getInstance();
-
     protected IToken(INode from, INode owner, INode to) {
+        this();
         this.from = from;
         this.owner = owner;
         this.to = to;
@@ -59,10 +58,6 @@ public abstract class IToken {
     public long getTime() {
         return time;
     }
-
-//    public void setTime(long time) {
-//        this.time = time;
-//    }
 
     public void setTimeCost(long timeCost) {
         this.time = globalClock.getTime() + timeCost;

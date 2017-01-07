@@ -4,13 +4,13 @@ import cn.edu.thu.jcpn.cassandra.token.*;
 import cn.edu.thu.jcpn.cassandra.token.ResponseToken.ResponseType;
 import cn.edu.thu.jcpn.core.cpn.CPN;
 import cn.edu.thu.jcpn.core.cpn.runtime.RuntimeFoldingCPN;
-import cn.edu.thu.jcpn.core.place.Place;
-import cn.edu.thu.jcpn.core.place.Place.PlaceType;
-import cn.edu.thu.jcpn.core.runtime.GlobalClock;
+import cn.edu.thu.jcpn.core.container.place.Place;
+import cn.edu.thu.jcpn.core.container.place.Place.PlaceType;
 import cn.edu.thu.jcpn.core.runtime.tokens.INode;
 import cn.edu.thu.jcpn.core.runtime.tokens.IToken;
 import cn.edu.thu.jcpn.core.runtime.tokens.StringNode;
 import cn.edu.thu.jcpn.core.runtime.tokens.UnitToken;
+import cn.edu.thu.jcpn.core.container.storage.Storage;
 import cn.edu.thu.jcpn.core.transition.Transition;
 import cn.edu.thu.jcpn.core.transition.condition.InputToken;
 import cn.edu.thu.jcpn.core.transition.condition.OutputToken;
@@ -19,16 +19,17 @@ import org.apache.commons.math3.random.EmpiricalDistribution;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.junit.Before;
-import org.junit.Test;
 
-import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.*;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+
+import static cn.edu.thu.jcpn.core.container.place.Place.PlaceType.COMMUNICATING;
+import static cn.edu.thu.jcpn.core.container.place.Place.PlaceType.LOCAL;
+import static cn.edu.thu.jcpn.core.transition.Transition.TransitionType.TRANSMIT;
 
 /**
  * Created by leven on 2016/12/25.
@@ -38,10 +39,11 @@ public class CassandraWriterTest {
     private static Logger logger = LogManager.getLogger();
 
     private static int SERVER_NUMBER = 5;
+    private static int CLIENT_NUMBER = 20;
+    private static int CONTROLLER_NUMBER = 1;
+
     private static int REPLICA = 3;
 
-    private CPN cpn;
-    private List<INode> nodes;
     private RuntimeFoldingCPN instance;
 
     private Properties empiricalDistributions = new Properties();
@@ -49,11 +51,7 @@ public class CassandraWriterTest {
     @Before
     public void initCassandraWriter() throws IOException {
 
-        cpn = new CPN();
-        cpn.setVersion("1.0");
-
-        nodes = IntStream.rangeClosed(1, SERVER_NUMBER).
-                mapToObj(x -> new StringNode("server" + x)).collect(Collectors.toList());
+        instance = new RuntimeFoldingCPN();
 
         //time cost distributions
         Properties distributions = new Properties();
@@ -71,23 +69,65 @@ public class CassandraWriterTest {
         EmpiricalDistribution syncTimeCost2 = new EmpiricalDistribution(100);
         syncTimeCost2.load((double[]) empiricalDistributions.get("write_response"));
 
+        /**************************************************************************************************************/
 
-        // global placeId and placeName.
-        Place place1 = new Place(1, "request", PlaceType.LOCAL);
-        //nodes.forEach(node -> place1.addInitToken(node, new RequestToken("name", node.getName(), 2, 0)));
+        CPN clientCPN = new CPN();
+        clientCPN.setName("clientCPN");
+        clientCPN.setVersion("1.0");
 
-        Place place2 = new Place(2, "lookup table", PlaceType.CONSUMELESS);
+        List<INode> clients = IntStream.rangeClosed(1, CLIENT_NUMBER).
+                mapToObj(x -> new StringNode("client" + x)).collect(Collectors.toList());
+        Place place20 = new Place(20, "client", LOCAL);
+        Place place21 = new Place(21, "network resources", COMMUNICATING);
+
+        Place place1 = new Place(1, "request", LOCAL);
+
+        Transition transition20 = new Transition(20, "make request", TRANSMIT);
+        transition20.setTransferFunction(inputToken -> {
+            OutputToken outputToken = new OutputToken();
+
+            RequestToken request = (RequestToken) inputToken.get(place20.getId());
+            IToken socket = inputToken.get(place21.getId());
+
+            request.setTimeCost(1);
+            outputToken.addToken(request.getOwner(), place20.getId(), request);
+
+            socket.setTimeCost(1);
+            outputToken.addToken(socket.getOwner(), place21.getId(), socket);
+
+            RequestToken received = new RequestToken(request.getKey(), request.getValue(), request.getConsistency());
+            received.setFrom(socket.getOwner());
+            received.setTimeCost(1);
+            outputToken.addToken(socket.getTo(), place1.getId(), received);
+
+            return outputToken;
+        });
+
+        clientCPN.addPlaces(place20, place21);
+        clientCPN.addTransitions(transition20);
+        instance.addCpn(clientCPN, clients);
+
+        /**************************************************************************************************************/
+
+        CPN serverCPN = new CPN();
+        clientCPN.setName("serverCPN");
+        clientCPN.setVersion("1.0");
+
+        List<INode> servers = IntStream.rangeClosed(1, SERVER_NUMBER).
+                mapToObj(x -> new StringNode("server" + x)).collect(Collectors.toList());
+
+        Storage place2 = new Storage(1, "lookup table");
         List<INode> cooperateNodes = new ArrayList<>();
         // initial tokens in place2
         List<IToken> hashTable = new ArrayList<>();
         for (int i = 0; i < SERVER_NUMBER; ++i) {
             cooperateNodes.clear();
             for (int j = 0; j < REPLICA; ++j) {
-                cooperateNodes.add(nodes.get((j + i) % SERVER_NUMBER));
+                cooperateNodes.add(servers.get((j + i) % SERVER_NUMBER));
             }
             hashTable.add(new HashToken(i, new ArrayList<>(cooperateNodes)));
         }
-        nodes.forEach(node -> place2.addInitTokens(node, hashTable));
+        servers.forEach(node -> place2.addInitTokens(node, hashTable));
 
         Transition transition1 = new Transition(1, "schedule");
         transition1.addInPlace(place1).addInPlace(place2);
@@ -100,15 +140,15 @@ public class CassandraWriterTest {
         });
 
         Place place3 = new Place(3, "sending queue", PlaceType.COMMUNICATING);
-        Place place4 = new Place(4, "callback", PlaceType.LOCAL);
+        Place place4 = new Place(4, "callback", LOCAL);
 
         Place place5 = new Place(5, "network resources", PlaceType.COMMUNICATING);
-        nodes.forEach(owner -> nodes.stream().filter(to -> !to.equals(owner)).forEach(to ->
+        servers.forEach(owner -> servers.stream().filter(to -> !to.equals(owner)).forEach(to ->
                 place5.addInitToken(null, owner, to, new UnitToken())
         ));
 
-        Place place6 = new Place(6, "received message", PlaceType.LOCAL);
-        Place place7 = new Place(7, "writing queue", PlaceType.LOCAL);
+        Place place6 = new Place(6, "received message", LOCAL);
+        Place place7 = new Place(7, "writing queue", LOCAL);
 
         transition1.addOutPlace(place3).addOutPlace(place4).addOutPlace(place7);
         transition1.setTransferFunction(inputToken -> {
@@ -274,7 +314,7 @@ public class CassandraWriterTest {
             return callBack.getCallback() <= 0;
         });
 
-        Place place11 = new Place(11, "response", PlaceType.LOCAL);
+        Place place11 = new Place(11, "response", LOCAL);
         transition9.addOutPlace(place11);
         transition9.setTransferFunction(inputToken -> {
             OutputToken outputToken = new OutputToken();
@@ -313,10 +353,11 @@ public class CassandraWriterTest {
             return outputToken;
         });*/
 
-        cpn.addPlaces(place1, place2, place3, place4, place5, place6, place7, place8, place9, place10, place11, place12);
-        cpn.addTransitions(transition1, transition2, transition3, transition4, transition5, transition6,
+        clientCPN.addPlaces(place1, place2, place3, place4, place5, place6, place7, place8, place9, place10, place11, place12);
+        clientCPN.addTransitions(transition1, transition2, transition3, transition4, transition5, transition6,
                 transition7, transition8, transition9, transition10, transition11);
-        instance = new RuntimeFoldingCPN(cpn, nodes);
+        instance = new RuntimeFoldingCPN();
+        instance.addCpn(clientCPN, servers);
         instance.setMaximumExecutionTime(1000000L * Integer.valueOf(System.getProperty("maxTime", "100")));//us
     }
 }

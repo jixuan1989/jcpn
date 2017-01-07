@@ -1,4 +1,4 @@
-package cn.edu.thu.jcpn.core.place;
+package cn.edu.thu.jcpn.core.container.place;
 
 import cn.edu.thu.jcpn.core.runtime.tokens.INode;
 import cn.edu.thu.jcpn.core.runtime.tokens.IToken;
@@ -8,8 +8,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static cn.edu.thu.jcpn.core.place.Place.PlaceStrategy.*;
-import static cn.edu.thu.jcpn.core.place.Place.PlaceType.*;
+import static cn.edu.thu.jcpn.core.container.place.Place.PlaceStrategy.*;
+import static cn.edu.thu.jcpn.core.container.place.Place.PlaceType.*;
 
 public class Place {
 
@@ -22,7 +22,7 @@ public class Place {
     /**
      * <owner, tokens for this owner>
      */
-    private Map<INode, List<IToken>> initialTokens;
+    private Map<INode, List<IToken>> initTokens;
 
     /**
      * <br>BAG : random sort the tokens.
@@ -33,13 +33,13 @@ public class Place {
     }
 
     public enum PlaceType {
-        LOCAL, COMMUNICATING, CONSUMELESS
+        LOCAL, COMMUNICATING
     }
 
     private Place() {
         type = LOCAL;
         strategy = BAG;
-        initialTokens = new HashMap<>();
+        initTokens = new HashMap<>();
     }
 
     private Place(int id) {
@@ -90,12 +90,12 @@ public class Place {
         this.type = type;
     }
 
-    public Map<INode, List<IToken>> getInitialTokens() {
-        return initialTokens;
+    public Map<INode, List<IToken>> getInitTokens() {
+        return initTokens;
     }
 
-    public void setInitialTokens(Map<INode, List<IToken>> initialTokens) {
-        this.initialTokens = initialTokens;
+    public void setInitTokens(Map<INode, List<IToken>> initTokens) {
+        this.initTokens = initTokens;
     }
 
     public void addInitTokens(INode owner, List<IToken> tokens) {
@@ -110,10 +110,10 @@ public class Place {
         token.setFrom(from);
         token.setOwner(owner);
         token.setTo(to);
-        initialTokens.computeIfAbsent(owner, obj -> new ArrayList<>()).add(token);
+        initTokens.computeIfAbsent(owner, obj -> new ArrayList<>()).add(token);
     }
 
     public List<IToken> getTokensByOwner(INode owner) {
-        return initialTokens.get(owner);
+        return initTokens.get(owner);
     }
 }

@@ -3,9 +3,11 @@ package cn.edu.thu.jcpn.cassandra.token;
 import cn.edu.thu.jcpn.core.runtime.tokens.IToken;
 
 /**
- * Created by leven on 2017/1/2.
+ * Created by leven on 2017/1/6.
  */
 public class RequestToken extends IToken {
+
+    private static int count = 0;
 
     private int id;
     private String key;
@@ -13,11 +15,8 @@ public class RequestToken extends IToken {
     private long version;
     private int consistency;
 
-    private static int count = 0;
-
-    public RequestToken(String key, String value, int consistency, long absoluteTime) {
+    public RequestToken(String key, String value, int consistency) {
         super();
-        this.time = absoluteTime;
         this.id = count++;
         this.key = key;
         this.value = value;

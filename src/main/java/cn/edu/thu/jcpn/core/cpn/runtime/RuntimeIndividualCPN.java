@@ -1,10 +1,10 @@
 package cn.edu.thu.jcpn.core.cpn.runtime;
 
+import cn.edu.thu.jcpn.core.container.place.RuntimePlace;
 import cn.edu.thu.jcpn.core.monitor.IPlaceMonitor;
 import cn.edu.thu.jcpn.core.monitor.IExecutor;
 import cn.edu.thu.jcpn.core.monitor.ITransitionMonitor;
-import cn.edu.thu.jcpn.core.place.Place;
-import cn.edu.thu.jcpn.core.place.runtime.*;
+import cn.edu.thu.jcpn.core.container.place.Place;
 import cn.edu.thu.jcpn.core.runtime.tokens.INode;
 import cn.edu.thu.jcpn.core.runtime.tokens.IToken;
 import cn.edu.thu.jcpn.core.recoverer.Recoverer;
@@ -304,12 +304,14 @@ public class RuntimeIndividualCPN {
         Map<INode, Collection<IToken>> tested = new HashMap<>();
         Map<INode, Collection<IToken>> newly = new HashMap<>();
         Map<INode, Collection<IToken>> future = new HashMap<>();
-        foldingCPN.getOwners().forEach(owner -> {
-            RuntimePlace runtimePlace = foldingCPN.getIndividualCPN(owner).getPlace(pid);
-            timeout.put(owner, runtimePlace.getTimeoutTokens());
-            tested.put(owner, runtimePlace.getTestedTokens());
-            newly.put(owner, runtimePlace.getNewlyTokens());
-            future.put(owner, runtimePlace.getFutureTokens());
+        foldingCPN.getNodes().forEach(owner -> {
+            if (null != foldingCPN.getIndividualCPN(owner).getPlace(pid)) {
+                RuntimePlace runtimePlace = foldingCPN.getIndividualCPN(owner).getPlace(pid);
+                timeout.put(owner, runtimePlace.getTimeoutTokens());
+                tested.put(owner, runtimePlace.getTestedTokens());
+                newly.put(owner, runtimePlace.getNewlyTokens());
+                future.put(owner, runtimePlace.getFutureTokens());
+            }
         });
         res.put(TIMEOUT, timeout);
         res.put(TESTED, tested);

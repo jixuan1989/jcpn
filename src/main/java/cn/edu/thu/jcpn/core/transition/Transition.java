@@ -1,6 +1,6 @@
 package cn.edu.thu.jcpn.core.transition;
 
-import cn.edu.thu.jcpn.core.place.Place;
+import cn.edu.thu.jcpn.core.container.place.Place;
 import cn.edu.thu.jcpn.core.transition.condition.Condition;
 import cn.edu.thu.jcpn.core.transition.condition.InputToken;
 import cn.edu.thu.jcpn.core.transition.condition.OutputToken;

@@ -1,7 +1,5 @@
-package cn.edu.thu.jcpn.core.place.runtime;
+package cn.edu.thu.jcpn.core.container.place;
 
-import cn.edu.thu.jcpn.core.place.Place;
-import cn.edu.thu.jcpn.core.place.Place.*;
 import cn.edu.thu.jcpn.core.runtime.GlobalClock;
 import cn.edu.thu.jcpn.core.runtime.tokens.INode;
 import cn.edu.thu.jcpn.core.runtime.tokens.IToken;
@@ -10,16 +8,14 @@ import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.stream.Collectors;
 
-import static cn.edu.thu.jcpn.core.place.Place.PlaceType.CONSUMELESS;
-
 public class RuntimePlace {
 
     private int id;
     private String name;
     protected INode owner;
 
-    private PlaceType type;
-    private PlaceStrategy placeStrategy;
+    private Place.PlaceType type;
+    private Place.PlaceStrategy placeStrategy;
 
     /**
      * If it is a local place, then it only has a LocalAsTarget in the three tokenMaps.
@@ -64,7 +60,7 @@ public class RuntimePlace {
         return name;
     }
 
-    public PlaceStrategy getPlaceStrategy() {
+    public Place.PlaceStrategy getPlaceStrategy() {
         return placeStrategy;
     }
 
@@ -101,7 +97,7 @@ public class RuntimePlace {
     public void addToken(IToken token) {
         if (null == token) return;
 
-        if (this.getPlaceStrategy().equals(PlaceStrategy.BAG)) {
+        if (this.getPlaceStrategy().equals(Place.PlaceStrategy.BAG)) {
             addTokenBAG(token);
         } else {
             addTokenFIFO(token);
@@ -214,8 +210,6 @@ public class RuntimePlace {
     }
 
     public boolean removeTokenFromTest(IToken token) {
-        if (type == CONSUMELESS) return true;
-
         return testedTokens.remove(token);
     }
 

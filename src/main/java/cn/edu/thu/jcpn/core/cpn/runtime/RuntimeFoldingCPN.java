@@ -4,7 +4,7 @@ import cn.edu.thu.jcpn.common.Triple;
 import cn.edu.thu.jcpn.core.cpn.CPN;
 import cn.edu.thu.jcpn.core.monitor.IPlaceMonitor;
 import cn.edu.thu.jcpn.core.monitor.ITransitionMonitor;
-import cn.edu.thu.jcpn.core.place.Place;
+import cn.edu.thu.jcpn.core.container.place.Place;
 import cn.edu.thu.jcpn.core.runtime.GlobalClock;
 import cn.edu.thu.jcpn.core.runtime.GlobalClock.EventType;
 import cn.edu.thu.jcpn.core.runtime.tokens.INode;
@@ -20,62 +20,37 @@ public class RuntimeFoldingCPN {
 
     private static Logger logger = LogManager.getLogger();
 
-    private CPN graph;
-    private List<INode> owners;
-    private Map<INode, RuntimeIndividualCPN> individualCPNs;
-    private boolean compiled;
+    private Set<CPN> cpns;
+    private List<INode> nodes;
+    private Map<INode, RuntimeIndividualCPN> nodeIndividualCPNs;
 
     private GlobalClock globalClock;
     /**
-     * // set the maximal execution time of CPN global clock.
-     * (because some CPN can execute forever, so we can disrupt the process after maximumExecutionTime.)
+     * set the maximal execution time of the foldingCPN.
+     * (because some type of foldingCPN can execute forever,
+     * maximumExecutionTime enable us to disrupt the process after that.)
      */
     private long maximumExecutionTime;
 
-    public RuntimeFoldingCPN(CPN graph, List<INode> owners) {
-        this.graph = graph;
-        this.owners = owners;
-        this.individualCPNs = new HashMap<>();
-        this.compiled = false;
+    public RuntimeFoldingCPN() {
+        this.cpns = new HashSet<>();
+        this.nodes = new ArrayList<>();
+        this.nodeIndividualCPNs = new HashMap<>();
 
         this.globalClock = GlobalClock.getInstance();
         this.maximumExecutionTime = Long.MAX_VALUE;
-
-        this.compile();
     }
 
-    /**
-     * unfold the CPN net. Then, compile its foldingCPNInstance if needed.
-     * If the method compiles the folding cpn, it will register running events at time 0L for
-     * all the individual cpn instance, i.e., all the servers.
-     *
-     * @return
-     */
-    public boolean compile() {
-        if (compiled) return true;
-
-        Collection<Place> places = graph.getPlaces().values();
-        Collection<Transition> transitions = graph.getTransitions().values();
-        Collection<Recoverer> timeoutTransitions = graph.getRecoverers().values();
-
-        for (INode owner : owners) {
-            RuntimeIndividualCPN individualCPN = new RuntimeIndividualCPN(owner, this);
-            individualCPN.construct(places, transitions, timeoutTransitions);
-            individualCPNs.put(owner, individualCPN);
-        }
-
-        owners.forEach(owner -> globalClock.addAbsoluteTimePointForRemoteHandle(owner, 0L));
-
-        compiled = true;
-        return compiled;
+    public Set<CPN> getCpns() {
+        return cpns;
     }
 
-    public List<INode> getOwners() {
-        return owners;
+    public List<INode> getNodes() {
+        return nodes;
     }
 
-    public boolean isCompiled() {
-        return compiled;
+    public Map<INode, RuntimeIndividualCPN> getNodeIndividualCPNs() {
+        return nodeIndividualCPNs;
     }
 
     public long getMaximumExecutionTime() {
@@ -87,23 +62,55 @@ public class RuntimeFoldingCPN {
     }
 
     public void addMonitor(int pid, IPlaceMonitor monitor) {
-        owners.forEach(owner -> addMonitor(owner, pid, monitor));
+        nodeIndividualCPNs.values().stream().filter(individualCPN -> individualCPN.getPlaces().containsKey(pid)).
+                forEach(individualCPN -> addMonitor(individualCPN.getOwner(), pid, monitor));
     }
 
-    public void addMonitor(INode owner, int pid, IPlaceMonitor monitor) {
-        if (!owners.contains(owner) || !graph.getPlaces().containsKey(pid)) return;
+    public void addMonitor(INode node, int pid, IPlaceMonitor monitor) {
+        if (!nodeIndividualCPNs.containsKey(node) || !nodeIndividualCPNs.get(node).getPlaces().containsKey(pid))
+            return;
 
-        individualCPNs.get(owner).addMonitor(pid, monitor);
+        nodeIndividualCPNs.get(node).addMonitor(pid, monitor);
     }
 
     public void addMonitor(int tid, ITransitionMonitor monitor) {
-        owners.forEach(owner -> addMonitor(owner, tid, monitor));
+        nodeIndividualCPNs.values().stream().filter(individualCPN -> individualCPN.getTransitions().containsKey(tid)).
+                forEach(individualCPN -> addMonitor(individualCPN.getOwner(), tid, monitor));
     }
 
-    public void addMonitor(INode owner, int tid, ITransitionMonitor monitor) {
-        if (!owners.contains(owner) || !graph.getTransitions().containsKey(tid)) return;
+    public void addMonitor(INode node, int tid, ITransitionMonitor monitor) {
+        if (!nodeIndividualCPNs.containsKey(node) || !nodeIndividualCPNs.get(node).getTransitions().containsKey(tid))
+            return;
 
-        individualCPNs.get(owner).addMonitor(tid, monitor);
+        nodeIndividualCPNs.get(node).addMonitor(tid, monitor);
+    }
+
+    public void addCpn(CPN cpn, List<INode> nodes) {
+        this.cpns.add(cpn);
+        this.nodes.addAll(nodes);
+
+        compile(cpn, nodes);
+    }
+
+    /**
+     * unfold the CPN net. Then, compile its foldingCPNInstance if needed.
+     * If the method compiles the folding cpn, it will register running events at time 0L for
+     * all the individual cpn instance, i.e., all the servers.
+     *
+     * @return
+     */
+    private void compile(CPN cpn, List<INode> nodes) {
+        Collection<Place> places = cpn.getPlaces().values();
+        Collection<Transition> transitions = cpn.getTransitions().values();
+        Collection<Recoverer> recoverers = cpn.getRecoverers().values();
+
+        nodes.forEach(node -> {
+            RuntimeIndividualCPN individualCPN = new RuntimeIndividualCPN(node, this);
+            individualCPN.construct(places, transitions, recoverers);
+            nodeIndividualCPNs.put(node, individualCPN);
+
+            globalClock.addAbsoluteTimePointForRemoteHandle(node, 0L);
+        });
     }
 
     /**
@@ -113,7 +120,7 @@ public class RuntimeFoldingCPN {
      * @return
      */
     public RuntimeIndividualCPN getIndividualCPN(INode owner) {
-        return individualCPNs.get(owner);
+        return nodeIndividualCPNs.get(owner);
     }
 
     /**
@@ -180,6 +187,6 @@ public class RuntimeFoldingCPN {
     }
 
     public void logStatus() {
-        individualCPNs.values().forEach(RuntimeIndividualCPN::logStatus);
+        nodeIndividualCPNs.values().forEach(RuntimeIndividualCPN::logStatus);
     }
 }

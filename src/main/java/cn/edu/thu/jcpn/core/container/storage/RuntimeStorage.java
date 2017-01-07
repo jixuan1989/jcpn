@@ -1,12 +1,11 @@
-package cn.edu.thu.jcpn.core.storage.runtime;
+package cn.edu.thu.jcpn.core.container.storage;
 
+import cn.edu.thu.jcpn.core.runtime.GlobalClock;
 import cn.edu.thu.jcpn.core.runtime.tokens.INode;
 import cn.edu.thu.jcpn.core.runtime.tokens.IToken;
-import cn.edu.thu.jcpn.core.storage.Storage;
 
 import java.util.*;
 import java.util.function.Predicate;
-import java.util.stream.Collectors;
 
 public class RuntimeStorage {
 
@@ -15,7 +14,11 @@ public class RuntimeStorage {
     protected INode owner;
 
     private Predicate<IToken> replaceStrategy;
-    private Set<IToken> storage;
+
+    private List<IToken> availableTokens;
+    private List<IToken> futureTokens;
+
+    private GlobalClock globalClock;
 
     public RuntimeStorage(INode owner, Storage storage) {
         this.owner = owner;
@@ -23,7 +26,11 @@ public class RuntimeStorage {
         this.name = storage.getName();
 
         this.replaceStrategy = storage.getReplaceStrategy();
-        this.storage = new HashSet<>();
+
+        this.availableTokens = new ArrayList<>();
+        this.futureTokens = new ArrayList<>();
+
+        globalClock = GlobalClock.getInstance();
     }
 
     public Integer getId() {
@@ -38,20 +45,31 @@ public class RuntimeStorage {
         return owner;
     }
 
-    public Set<IToken> getStorage() {
-        return storage;
+    public List<IToken> getAvailableTokens() {
+        return availableTokens;
+    }
+
+    public List<IToken> getFutureTokens() {
+        return futureTokens;
+    }
+
+    public Predicate<IToken> getReplaceStrategy() {
+        return replaceStrategy;
     }
 
     public void addTokens(List<IToken> tokens) {
+        if (null == tokens) return;
+
         tokens.forEach(this::addToken);
     }
 
     public void addToken(IToken token) {
-        if (replaceStrategy != null) {
-            Set<IToken> removed = storage.stream().filter(replaceStrategy).collect(Collectors.toSet());
-            storage.removeAll(removed);
-        }
-        storage.add(token);
-    }
+        if (null == token) return;
 
+        if (token.getTime() > globalClock.getTime()) {
+            futureTokens.add(token);
+        } else {
+            availableTokens.add(token);
+        }
+    }
 }
