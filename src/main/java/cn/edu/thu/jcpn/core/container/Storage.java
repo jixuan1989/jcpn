@@ -8,7 +8,7 @@ import java.util.function.BiPredicate;
 
 public class Storage implements IContainer {
 
-    private static int count = 0;
+    private static int count = 2000;
 
     private int id;
     private String name;

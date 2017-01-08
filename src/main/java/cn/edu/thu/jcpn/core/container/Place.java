@@ -13,7 +13,7 @@ import static cn.edu.thu.jcpn.core.container.Place.PlaceType.*;
 
 public class Place implements IContainer {
 
-    private static int count = 0;
+    private static int count = 1000;
 
     private int id;
     private String name;

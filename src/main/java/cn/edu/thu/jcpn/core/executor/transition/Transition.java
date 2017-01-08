@@ -1,7 +1,6 @@
 package cn.edu.thu.jcpn.core.executor.transition;
 
 import cn.edu.thu.jcpn.core.container.IContainer;
-import cn.edu.thu.jcpn.core.container.Place;
 import cn.edu.thu.jcpn.core.executor.transition.condition.Condition;
 import cn.edu.thu.jcpn.core.executor.transition.condition.ContainerPartition;
 import cn.edu.thu.jcpn.core.executor.transition.condition.InputToken;
@@ -18,7 +17,7 @@ import static cn.edu.thu.jcpn.core.executor.transition.Transition.TransitionType
  */
 public class Transition {
 
-    private static int count = 0;
+    private static int count = 3000;
 
     private int id;
     private String name;

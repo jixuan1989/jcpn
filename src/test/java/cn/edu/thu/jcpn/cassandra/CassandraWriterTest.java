@@ -8,10 +8,10 @@ import cn.edu.thu.jcpn.core.cpn.runtime.RuntimeFoldingCPN;
 import cn.edu.thu.jcpn.core.container.Place;
 import cn.edu.thu.jcpn.core.container.Place.PlaceType;
 import cn.edu.thu.jcpn.core.executor.recoverer.Recoverer;
+import cn.edu.thu.jcpn.core.monitor.IStorageMonitor;
 import cn.edu.thu.jcpn.core.monitor.ITransitionMonitor;
 import cn.edu.thu.jcpn.core.runtime.tokens.INode;
 import cn.edu.thu.jcpn.core.runtime.tokens.IToken;
-import cn.edu.thu.jcpn.core.runtime.tokens.StringNode;
 import cn.edu.thu.jcpn.core.runtime.tokens.UnitToken;
 import cn.edu.thu.jcpn.core.container.Storage;
 import cn.edu.thu.jcpn.core.executor.transition.Transition;
@@ -464,7 +464,14 @@ public class CassandraWriterTest {
         ITransitionMonitor transitionMonitor = (time, owner, transitionId, transitionName, inputToken, outputToken) -> {
             logger.info(() -> String.format("[%d] owner %s executes %d (%s)", time, owner, transitionId, transitionName));
         };
-        serverCPN.getTransitions().forEach((tid, transition) -> instance.addMonitor(tid, transitionMonitor));
+
+        IStorageMonitor storageMonitor = (time, owner, storageName, token) -> {
+            WriteToken temp = (WriteToken) token;
+            logger.info(() -> String.format("time %d\t%s\tputs [%d]\tin\t%s", time, owner, temp.getRid(), storageName));
+        };
+
+        instance.addMonitor(storage106.getId(), storageMonitor);
+        //serverCPN.getTransitions().forEach((tid, transition) -> instance.addMonitor(tid, transitionMonitor));
         instance.setMaximumExecutionTime(1000000L * Integer.valueOf(System.getProperty("maxTime", "100")));//us
     }
 

@@ -7,6 +7,7 @@ import cn.edu.thu.jcpn.core.container.Storage;
 import cn.edu.thu.jcpn.core.container.runtime.RuntimeStorage;
 import cn.edu.thu.jcpn.core.monitor.IPlaceMonitor;
 import cn.edu.thu.jcpn.core.executor.IRuntimeExecutor;
+import cn.edu.thu.jcpn.core.monitor.IStorageMonitor;
 import cn.edu.thu.jcpn.core.monitor.ITransitionMonitor;
 import cn.edu.thu.jcpn.core.container.Place;
 import cn.edu.thu.jcpn.core.runtime.GlobalClock;
@@ -37,6 +38,7 @@ public class RuntimeIndividualCPN {
     private INode owner;
     private Map<Integer, IRuntimeContainer> containers;
     private Map<Integer, IPlaceMonitor> placeMonitors;
+    private Map<Integer, IStorageMonitor> storageMonitors;
 
     private Map<Integer, RuntimeTransition> transitions;
     private Map<Integer, ITransitionMonitor> transitionMonitors;
@@ -60,6 +62,7 @@ public class RuntimeIndividualCPN {
         this.transitions = new HashMap<>();
 
         this.placeMonitors = new HashMap<>();
+        this.storageMonitors = new HashMap<>();
         this.transitionMonitors = new HashMap<>();
 
         this.recoverers = new HashMap<>();
@@ -106,6 +109,13 @@ public class RuntimeIndividualCPN {
 
         placeMonitors.put(pid, monitor);
     }
+
+    public void addMonitor(int sid, IStorageMonitor monitor) {
+        if (!containers.containsKey(sid)) return;
+
+        storageMonitors.put(sid, monitor);
+    }
+
 
     private void addTransition(Transition transition) {
         transitions.put(transition.getId(), new RuntimeTransition(owner, transition, containers, foldingCPN));
@@ -279,18 +289,25 @@ public class RuntimeIndividualCPN {
         );
     }
 
-    private void reportAfterTokensAdded(int pid, List<IToken> tokens, IRuntimeExecutor executor) {
-        if (!placeMonitors.containsKey(pid)) return;
+    private void reportAfterTokensAdded(int id, List<IToken> tokens, IRuntimeExecutor executor) {
+        if (!placeMonitors.containsKey(id) && !storageMonitors.containsKey(id)) return;
 
-        IPlaceMonitor monitor = placeMonitors.get(pid);
-        RuntimePlace place = (RuntimePlace) containers.get(pid);
-        monitor.reportAfterTokensAdded(owner, place.getId(), place.getName(),
-                tokens, executor.getOwner(), executor.getId(), executor.getName(), place.getTimeoutTokens(),
-                place.getTestedTokens(), place.getNewlyTokens(), place.getFutureTokens());
+        if (placeMonitors.containsKey(id)) {
+            IPlaceMonitor monitor = placeMonitors.get(id);
+            RuntimePlace place = (RuntimePlace) containers.get(id);
+            monitor.reportAfterTokensAdded(owner, place.getId(), place.getName(),
+                    tokens, executor.getOwner(), executor.getId(), executor.getName(), place.getTimeoutTokens(),
+                    place.getTestedTokens(), place.getNewlyTokens(), place.getFutureTokens());
 
-        Map<TokenType, Map<INode, Collection<IToken>>> pidAllTokens = getPidAllTokens(pid);
-        monitor.reportAfterTokensAdded(owner, place.getId(), place.getName(), tokens, pidAllTokens.get(TIMEOUT),
-                pidAllTokens.get(TESTED), pidAllTokens.get(NEWLY), pidAllTokens.get(FUTURE));
+            Map<TokenType, Map<INode, Collection<IToken>>> pidAllTokens = getPidAllTokens(id);
+            monitor.reportAfterTokensAdded(owner, place.getId(), place.getName(), tokens, pidAllTokens.get(TIMEOUT),
+                    pidAllTokens.get(TESTED), pidAllTokens.get(NEWLY), pidAllTokens.get(FUTURE));
+        }
+        else {
+            IStorageMonitor monitor = storageMonitors.get(id);
+            RuntimeStorage storage = (RuntimeStorage) containers.get(id);
+            tokens.forEach(token -> monitor.reportAfterTokensAdded(globalClock.getTime(), owner, storage.getName(), token));
+        }
     }
 
 

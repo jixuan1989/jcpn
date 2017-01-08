@@ -4,6 +4,7 @@ import cn.edu.thu.jcpn.common.Triple;
 import cn.edu.thu.jcpn.core.container.IContainer;
 import cn.edu.thu.jcpn.core.cpn.CPN;
 import cn.edu.thu.jcpn.core.monitor.IPlaceMonitor;
+import cn.edu.thu.jcpn.core.monitor.IStorageMonitor;
 import cn.edu.thu.jcpn.core.monitor.ITransitionMonitor;
 import cn.edu.thu.jcpn.core.container.Place;
 import cn.edu.thu.jcpn.core.runtime.GlobalClock;
@@ -82,6 +83,17 @@ public class RuntimeFoldingCPN {
             return;
 
         nodeIndividualCPNs.get(node).addMonitor(pid, monitor);
+    }
+
+    public void addMonitor(int sid, IStorageMonitor monitor) {
+        nodeIndividualCPNs.values().stream().filter(individualCPN -> individualCPN.getContainers().containsKey(sid)).
+                forEach(individualCPN -> addMonitor(individualCPN.getOwner(), sid, monitor));
+    }
+    public void addMonitor(INode node, int sid, IStorageMonitor monitor) {
+        if (!nodeIndividualCPNs.containsKey(node) || !nodeIndividualCPNs.get(node).getContainers().containsKey(sid))
+            return;
+
+        nodeIndividualCPNs.get(node).addMonitor(sid, monitor);
     }
 
     public void addMonitor(int tid, ITransitionMonitor monitor) {
