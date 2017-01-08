@@ -13,6 +13,8 @@ import static cn.edu.thu.jcpn.core.container.Place.PlaceType.*;
 
 public class Place implements IContainer {
 
+    private static int count = 0;
+
     private int id;
     private String name;
 
@@ -37,24 +39,19 @@ public class Place implements IContainer {
     }
 
     private Place() {
+        this.id = count++;
         type = LOCAL;
         strategy = BAG;
         initTokens = new HashMap<>();
     }
 
-    private Place(int id) {
+    private Place(String name) {
         this();
-        this.id = id;
-    }
-
-    private Place(int id, String name) {
-        this(id);
         this.name = name;
     }
 
-    public Place(int id, String name, PlaceType type) {
-        this(id);
-        this.name = name;
+    public Place(String name, PlaceType type) {
+        this(name);
         this.type = type;
     }
 
@@ -68,10 +65,6 @@ public class Place implements IContainer {
 
     public int getId() {
         return id;
-    }
-
-    public void setId(int id) {
-        this.id = id;
     }
 
     public String getName() {

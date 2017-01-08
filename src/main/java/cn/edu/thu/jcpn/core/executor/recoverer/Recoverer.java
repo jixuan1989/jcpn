@@ -11,6 +11,8 @@ import java.util.function.Function;
 
 public class Recoverer {
 
+    private static int count = 0;
+
     private int id;
     private String name;
 
@@ -19,8 +21,8 @@ public class Recoverer {
 
     private Function<IToken, Map<Integer, List<IToken>>> transferFunction;
 
-    public Recoverer(int id, String name) {
-        this.id = id;
+    public Recoverer(String name) {
+        this.id = count++;
         this.name = name;
         outContainers = new HashMap<>();
     }

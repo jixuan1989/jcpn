@@ -8,6 +8,8 @@ import java.util.function.BiPredicate;
 
 public class Storage implements IContainer {
 
+    private static int count = 0;
+
     private int id;
     private String name;
 
@@ -15,21 +17,17 @@ public class Storage implements IContainer {
     private BiPredicate<IToken, IToken> replaceStrategy;
 
     private Storage() {
+        this.id = count++;
     }
 
-    public Storage(int id, String name) {
+    public Storage(String name) {
         this();
-        this.id = id;
         this.name = name;
         initTokens = new HashMap<>();
     }
 
     public int getId() {
         return id;
-    }
-
-    public void setId(int id) {
-        this.id = id;
     }
 
     public String getName() {

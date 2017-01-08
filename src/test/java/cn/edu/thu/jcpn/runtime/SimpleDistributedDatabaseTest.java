@@ -33,26 +33,19 @@ public class SimpleDistributedDatabaseTest {
     private List<INode> nodes;
     private RuntimeFoldingCPN instance;
 
-    private GlobalClock globalClock = GlobalClock.getInstance();
-
     @Before
     public void initSimpleDistributedDatabase() {
 
         cpn = new CPN("simpleDD");
 
 
-        Place place1 = new Place(1, "local", PlaceType.LOCAL);
-        Place place2 = new Place(2, "received", PlaceType.LOCAL);
-        Place place3 = new Place(3, "toSend", PlaceType.COMMUNICATING);
-        Place place4 = new Place(4, "socket", PlaceType.COMMUNICATING);
+        Place place1 = new Place("local", PlaceType.LOCAL);
+        Place place2 = new Place("received", PlaceType.LOCAL);
+        Place place3 = new Place("toSend", PlaceType.COMMUNICATING);
+        Place place4 = new Place("socket", PlaceType.COMMUNICATING);
 
-        int PID_1 = 1;
-        int PID_2 = 2;
-        int PID_3 = 3;
-        int PID_4 = 4;
-
-        Transition transition1 = new Transition(1, "execute", TransitionType.LOCAL);
-        Transition transition2 = new Transition(2, "transmit", TransitionType.TRANSMIT);
+        Transition transition1 = new Transition("execute", TransitionType.LOCAL);
+        Transition transition2 = new Transition("transmit", TransitionType.TRANSMIT);
 
         transition1.addInContainer(place1).addInContainer(place2);
         transition1.addOutContainer(place1).addOutContainer(place3);
@@ -78,15 +71,15 @@ public class SimpleDistributedDatabaseTest {
         transition1.setTransferFunction(
                 inputToken -> {
                     OutputToken outputToken = new OutputToken();
-                    MessageToken received = (MessageToken) inputToken.get(PID_2);
+                    MessageToken received = (MessageToken) inputToken.get(place2.getId());
                     MessageToken toSend = new MessageToken(received.getMessage() + 1);
                     toSend.setTo(received.getFrom());
                     toSend.setTimeCost(1);
-                    outputToken.addToken(received.getOwner(), PID_3, toSend);
+                    outputToken.addToken(received.getOwner(), place3.getId(), toSend);
 
-                    IToken thread = inputToken.get(PID_1);
+                    IToken thread = inputToken.get(place1.getId());
                     thread.setTimeCost(1);
-                    outputToken.addToken(thread.getOwner(), PID_1, thread);
+                    outputToken.addToken(thread.getOwner(), place1.getId(), thread);
 
                     return outputToken;
                 }
@@ -95,15 +88,15 @@ public class SimpleDistributedDatabaseTest {
         transition2.setTransferFunction(
                 inputToken -> {
                     OutputToken outputToken = new OutputToken();
-                    MessageToken toSend = (MessageToken) inputToken.get(PID_3);
+                    MessageToken toSend = (MessageToken) inputToken.get(place3.getId());
                     MessageToken received = new MessageToken(toSend.getMessage() + 1);
                     received.setFrom(toSend.getOwner());
                     received.setTimeCost(1);
-                    outputToken.addToken(toSend.getTo(), PID_2, received);
+                    outputToken.addToken(toSend.getTo(), place2.getId(), received);
 
-                    IToken socket = inputToken.get(PID_4);
+                    IToken socket = inputToken.get(place4.getId());
                     socket.setTimeCost(1);
-                    outputToken.addToken(socket.getOwner(), PID_4, socket);
+                    outputToken.addToken(socket.getOwner(), place4.getId(), socket);
 
                     return outputToken;
                 }

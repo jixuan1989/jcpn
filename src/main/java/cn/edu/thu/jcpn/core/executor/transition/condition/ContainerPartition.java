@@ -13,11 +13,6 @@ import java.util.*;
 public class ContainerPartition extends TreeSet<Integer> {
 
     public ContainerPartition() {
-
-    }
-
-    public ContainerPartition(Integer... cids) {
-        Arrays.stream(cids).forEach(super::add);
     }
 
     /**

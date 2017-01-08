@@ -1,6 +1,7 @@
 package cn.edu.thu.jcpn.core.executor.transition;
 
 import cn.edu.thu.jcpn.core.container.IContainer;
+import cn.edu.thu.jcpn.core.container.Place;
 import cn.edu.thu.jcpn.core.executor.transition.condition.Condition;
 import cn.edu.thu.jcpn.core.executor.transition.condition.ContainerPartition;
 import cn.edu.thu.jcpn.core.executor.transition.condition.InputToken;
@@ -16,6 +17,8 @@ import static cn.edu.thu.jcpn.core.executor.transition.Transition.TransitionType
  * Transition has two type: local and transmit. The default type is LOCAL.
  */
 public class Transition {
+
+    private static int count = 0;
 
     private int id;
     private String name;
@@ -42,26 +45,26 @@ public class Transition {
     }
 
     private Transition() {
+        this.id = count++;
         this.type = LOCAL;
-    }
-
-    private Transition(int id, String name) {
-        this();
-        this.id = id;
-        this.name = name;
         inCidPriorities = new HashMap<>();
         inContainers = new HashMap<>();
         outContainers = new HashMap<>();
         condition = new Condition();
     }
 
-    public Transition(int id, String name, TransitionType type) {
-        this(id, name);
+    private Transition(String name) {
+        this();
+        this.name = name;
+    }
+
+    public Transition(String name, TransitionType type) {
+        this(name);
         this.type = type;
     }
 
-    public Transition(int id, String name, TransitionType type, int priority) {
-        this(id, name, type);
+    public Transition(String name, TransitionType type, int priority) {
+        this(name, type);
         this.priority = priority;
     }
 
@@ -130,8 +133,9 @@ public class Transition {
     public Condition getCondition() {
         return condition;
     }
-
-    public void addCondition(ContainerPartition containerPartition, Predicate<InputToken> predicate) {
-        condition.addPredicate(containerPartition, predicate);
+    public void addCondition(Predicate<InputToken> predicate, IContainer... containers) {
+        ContainerPartition partition = new ContainerPartition();
+        Arrays.stream(containers).forEach(container -> partition.add(container.getId()));
+        condition.addPredicate(partition, predicate);
     }
 }
