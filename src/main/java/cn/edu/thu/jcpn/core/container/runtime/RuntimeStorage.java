@@ -17,7 +17,8 @@ public class RuntimeStorage implements IRuntimeContainer {
 
     private BiPredicate<IToken, IToken> replaceStrategy;
 
-    private List<IToken> availableTokens;
+    private List<IToken> testedTokens;
+    private List<IToken> newlyTokens;
     private List<IToken> futureTokens;
 
     private GlobalClock globalClock;
@@ -29,7 +30,8 @@ public class RuntimeStorage implements IRuntimeContainer {
 
         this.replaceStrategy = storage.getReplaceStrategy();
 
-        this.availableTokens = new ArrayList<>();
+        this.testedTokens = new ArrayList<>();
+        this.newlyTokens = new ArrayList<>();
         this.futureTokens = new ArrayList<>();
 
         this.globalClock = GlobalClock.getInstance();
@@ -49,8 +51,16 @@ public class RuntimeStorage implements IRuntimeContainer {
         return owner;
     }
 
-    public List<IToken> getAvailableTokens() {
-        return availableTokens;
+    public List<IToken> getTestedTokens() {
+        return testedTokens;
+    }
+
+    public List<IToken> getNewlyTokens() {
+        return newlyTokens;
+    }
+
+    public boolean hasNewlyTokens() {
+        return !newlyTokens.isEmpty();
     }
 
     public List<IToken> getFutureTokens() {
@@ -69,15 +79,20 @@ public class RuntimeStorage implements IRuntimeContainer {
 
     public void addToken(IToken token) {
         if (null == token) return;
-        if(replaceStrategy!=null) {
-            Collection<IToken> removed = availableTokens.stream().
+        if(replaceStrategy != null) {
+            Collection<IToken> removed = testedTokens.stream().
                     filter(availableToken -> replaceStrategy.test(token, availableToken)).collect(Collectors.toList());
-            availableTokens.removeAll(removed);
+            testedTokens.removeAll(removed);
+
+            removed = newlyTokens.stream().
+                    filter(availableToken -> replaceStrategy.test(token, availableToken)).collect(Collectors.toList());
+            newlyTokens.removeAll(removed);
         }
+
         if (token.getTime() > globalClock.getTime()) {
             futureTokens.add(token);
         } else {
-            availableTokens.add(token);
+            newlyTokens.add(token);
         }
     }
 
@@ -85,22 +100,13 @@ public class RuntimeStorage implements IRuntimeContainer {
         List<IToken> enables = futureTokens.stream().
                 filter(token -> token.getTime() <= globalClock.getTime()).collect(Collectors.toList());
         futureTokens.removeAll(enables);
-        availableTokens.addAll(enables);
+        newlyTokens.addAll(enables);
 
         return new ArrayList<>();
     }
 
-    public void logStatus() {
-        StringBuilder sb = new StringBuilder();
-        sb.append("\t\tAvailable:");
-        if (availableTokens.size() > 0) {
-            availableTokens.forEach(token -> sb.append("\t" + token.toString()));
-        }
-        sb.append("\n\t\tFuture:");
-        if (futureTokens.size() > 0) {
-            futureTokens.forEach(token -> sb.append("\t" + token.toString()));
-        }
-        System.out.println(String.format("\t%d: %s", id, getName()));
-        System.out.println(sb.toString());
+    public void markTokensAsTested() {
+        testedTokens.addAll(newlyTokens);
+        newlyTokens.clear();
     }
 }

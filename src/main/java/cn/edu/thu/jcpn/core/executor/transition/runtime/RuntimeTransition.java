@@ -1,6 +1,7 @@
 package cn.edu.thu.jcpn.core.executor.transition.runtime;
 
 import cn.edu.thu.jcpn.core.container.IContainer;
+import cn.edu.thu.jcpn.core.container.IOnFireListener;
 import cn.edu.thu.jcpn.core.container.runtime.IRuntimeContainer;
 import cn.edu.thu.jcpn.core.container.runtime.RuntimeStorage;
 import cn.edu.thu.jcpn.core.cpn.runtime.RuntimeFoldingCPN;
@@ -17,7 +18,9 @@ import cn.edu.thu.jcpn.core.executor.transition.condition.Condition;
 import cn.edu.thu.jcpn.core.executor.transition.condition.InputToken;
 import cn.edu.thu.jcpn.core.executor.transition.condition.OutputToken;
 
+import java.awt.*;
 import java.util.*;
+import java.util.List;
 import java.util.Map.Entry;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -142,12 +145,23 @@ public class RuntimeTransition implements IRuntimeExecutor {
     public void checkNewlyTokens4Firing() {
         // for each partition, get available tokens under the conditions.
         cache.keySet().forEach(partition -> {
+            cleanIfHasOnFireListeners(partition);
             List<InputToken> availableTokens = new ArrayList<>();
+
             InputToken tokenSet = new InputToken();
             findAndSave(partition, tokenSet, availableTokens, 0);
-            // Map<INode, Map<ContainerPartition, List<InputToken>>> cache;
             cache.get(partition).addAll(availableTokens);
         });
+    }
+
+    private void cleanIfHasOnFireListeners(ContainerPartition partition) {
+        List<IRuntimeContainer> partitionContainers = partition.getCids().stream().map(cid -> inContainers.get(cid)).
+                collect(Collectors.toList());
+
+        boolean needClean = partitionContainers.stream().filter(container -> container instanceof RuntimePlace).
+                anyMatch(container -> ((RuntimePlace) container).hasOnFireListener());
+
+        if (needClean) cache.get(partition).clear();
     }
 
     private void findAndSave(ContainerPartition partition, InputToken tokenSet, List<InputToken> availableTokens, int position) {
@@ -171,29 +185,28 @@ public class RuntimeTransition implements IRuntimeExecutor {
     private List<IToken> getTokens(int cid) {
         IRuntimeContainer container = inContainers.get(cid);
         List<IToken> tokens = new ArrayList<>();
+
+        tokens.addAll(container.getTestedTokens());
+        if (container.hasNewlyTokens()) tokens.addAll(container.getNewlyTokens());
+
         if (container instanceof RuntimePlace) {
             RuntimePlace place = (RuntimePlace) container;
-
-            if (place.hasNewlyTokens()) tokens.addAll(place.getNewlyTokens());
-            tokens.addAll(place.getTestedTokens());
-        }
-        else {
-            RuntimeStorage storage = (RuntimeStorage) container;
-            tokens.addAll(storage.getAvailableTokens());
+            if (place.hasOnFireListener()) {
+                IOnFireListener onFireListener = place.getOnFireListener();
+                onFireListener.modifyTokens(tokens);
+            }
         }
 
         return tokens;
     }
 
     private boolean containNew(ContainerPartition partition, InputToken inputToken) {
-        for (int pid : partition) {
-            if (inContainers.get(pid) instanceof RuntimePlace) {
-                RuntimePlace place = (RuntimePlace)inContainers.get(pid);
-                List<IToken> tokens = place.getNewlyTokens();
-                IToken token = inputToken.get(pid);
-                if (tokens.contains(token)) {
-                    return true;
-                }
+        for (int cid : partition) {
+            IRuntimeContainer container = inContainers.get(cid);
+            List<IToken> tokens = container.getNewlyTokens();
+            IToken token = inputToken.get(cid);
+            if (tokens.contains(token)) {
+                return true;
             }
         }
         return false;
@@ -261,6 +274,10 @@ public class RuntimeTransition implements IRuntimeExecutor {
         return cache;
     }
 
+    public Map<ContainerPartition, List<InputToken>> getCache() {
+        return cache;
+    }
+
     /**
      * remove all the candidate bindings related with the given token.
      * <br> this method needs to be called if you find that you can not get the token any more from the input place, while the token is still in cached bindings.
@@ -280,7 +297,8 @@ public class RuntimeTransition implements IRuntimeExecutor {
     private void removeTokenFromCache(int pid, IToken token) {
         for (Entry<ContainerPartition, List<InputToken>> partitionEntry : cache.entrySet()) {
             ContainerPartition partition = partitionEntry.getKey();
-            if (!partition.contains(pid)) continue;
+            if (!partition.contains(pid) || inContainers.get(pid) == null ||
+                    !(inContainers.get(pid) instanceof RuntimePlace)) continue;
 
             List<InputToken> tokenSets = partitionEntry.getValue();
             List<InputToken> removedTokenSets = tokenSets.stream().

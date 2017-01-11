@@ -177,8 +177,6 @@ public class RuntimeFoldingCPN {
             return false;
         }
 
-        //globalClock.logStatus();
-
         Triple<EventType, Long, Set<INode>> nextEventTimeNodes = globalClock.timeElapse();
         if (null == nextEventTimeNodes) {
             return false;
@@ -186,8 +184,6 @@ public class RuntimeFoldingCPN {
 
         EventType eventType = nextEventTimeNodes.getLeft();
         Set<INode> nodes = nextEventTimeNodes.getRight();
-
-        //logStatus();
 
         logger.trace(() -> String.format("Run %s events... %s", eventType.toString(), nodes));
         nodes.parallelStream().forEach(node -> runACPNInstance(getIndividualCPN(node)));
@@ -206,9 +202,5 @@ public class RuntimeFoldingCPN {
             RuntimeTransition transition = individualCPN.randomEnable();
             individualCPN.fire(transition);
         }
-    }
-
-    public void logStatus() {
-        nodeIndividualCPNs.values().forEach(RuntimeIndividualCPN::logStatus);
     }
 }

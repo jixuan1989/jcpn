@@ -83,21 +83,4 @@ public class GlobalClock {
 
         return new Triple<>(eventType, timeNodes.getKey(), timeNodes.getValue());
     }
-
-    public void logStatus() {
-        StringBuilder sb = new StringBuilder();
-        timelineForLocalEvents.forEach((time, nodes) -> {
-            sb.append("at time " + time + ", will handle local event on nodes: ");
-            nodes.forEach(node -> sb.append(node + "\t"));
-            sb.append("\n");
-        });
-
-        timelineForRemoteEvents.forEach((time, nodes) -> {
-            sb.append("at time " + time + ", will handle remote event on nodes: ");
-            nodes.forEach(node -> sb.append(node + "\t"));
-            sb.append("\n");
-        });
-        System.out.println(sb.toString());
-    }
-
 }
