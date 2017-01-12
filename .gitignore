@@ -1,5 +1,6 @@
 target/*
 target
+src/test/resources/*
 .classpath
 .project
 .settings
