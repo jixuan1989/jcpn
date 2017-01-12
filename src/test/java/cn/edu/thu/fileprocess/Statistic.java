@@ -20,25 +20,23 @@ public class Statistic {
     static Map<Integer, List<String>> ridNodes = new TreeMap<>();
 
     static void originFileProcessAvg(String fileName) {
-        Map<String, Integer> in104 = new HashMap<>();
-        Map<String, Integer> in102 = new HashMap<>();
-        Map<String, Integer> out102 = new HashMap<>();
+        Map<String, Map<String, Integer>> in104 = new HashMap<>();
+        Map<String, Map<String, Integer>> in102 = new HashMap<>();
+        Map<String, Map<String, Integer>> out102 = new HashMap<>();
         try (Stream<String> stream = Files.lines(Paths.get(fileName))) {
             stream.parallel().forEach(line -> {
                 String[] data = line.split(",");
 
                 String rid = data[0];
                 int time = Integer.parseInt(data[1]);
-                if (data[2].equals("in")) {
-                    if (in104.containsKey(rid)) {
-                        int oldTime = in104.get(rid);
-                        in104.put(rid, Math.min(oldTime, time));
-                        in102.put(rid, Math.max(oldTime, time));
-                    }
-                    else in104.put(rid, time);
+                if (data[3].equals("to")) {
+                    in104.computeIfAbsent(rid, obj -> new HashMap<>()).put(data[2], time);
+                }
+                else if (data[3].equals("get")) {
+                    in102.computeIfAbsent(rid, obj -> new HashMap<>()).put(data[2], time);
                 }
                 else {
-                    out102.put(rid, time);
+                    out102.computeIfAbsent(rid, obj -> new HashMap<>()).put(data[2], time);
                 }
             });
         } catch (IOException e) {
@@ -47,38 +45,47 @@ public class Statistic {
 
         int count = 0;
         long sum = 0;
-        for (Map.Entry<String, Integer> entry : in104.entrySet()) {
-            String rid = entry.getKey();
-            int start = entry.getValue();
-            if (in102.containsKey(rid)) {
-                int end = in102.get(rid);
-                int interval = end - start;
-                ++count;
-                sum += interval;
+        for (Map.Entry<String, Map<String, Integer>> ridNodeTimes : in104.entrySet()) {
+            String rid = ridNodeTimes.getKey();
+            Map<String, Integer> nodeTimes = ridNodeTimes.getValue();
+            for (Map.Entry<String, Integer> nodeTime : nodeTimes.entrySet()) {
+                String node = nodeTime.getKey();
+                int start = nodeTime.getValue();
+                if (in102.containsKey(rid) && in102.get(rid).containsKey(node)) {
+                    int end = in102.get(rid).get(node);
+                    int interval = end - start;
+                    ++count;
+                    sum += interval;
+                }
             }
         }
-        System.out.println(sum / (count + 0.0));
+        System.out.println(String.format("sum: %d, count: %d, avg: %f", sum, count, sum / (count + 0.0)));
 
         count = 0;
         sum = 0;
-        for (Map.Entry<String, Integer> entry : in102.entrySet()) {
-            String rid = entry.getKey();
-            int start = entry.getValue();
-            if (out102.containsKey(rid)) {
-                int end = out102.get(rid);
-                int interval = end - start;
-                ++count;
-                sum += interval;
+        for (Map.Entry<String, Map<String, Integer>> ridNodeTimes : in102.entrySet()) {
+            String rid = ridNodeTimes.getKey();
+            Map<String, Integer> nodeTimes = ridNodeTimes.getValue();
+            for (Map.Entry<String, Integer> nodeTime : nodeTimes.entrySet()) {
+                String node = nodeTime.getKey();
+                int start = nodeTime.getValue();
+                if (out102.containsKey(rid) && out102.get(rid).containsKey(node)) {
+                    int end = out102.get(rid).get(node);
+                    int interval = end - start;
+                    ++count;
+                    sum += interval;
+                }
             }
         }
-        System.out.println(sum / (count + 0.0));
+        System.out.println(String.format("sum: %d, count: %d, avg: %f", sum, count, sum / (count + 0.0)));
+
     }
 
     public static void main(String[] args) throws IOException {
         String fileName = "src/test/resources/output/test.log";
         //originFileProcess(fileName);
-        //classifyProcess(fileName);
-        //processMap();
+//        classifyProcess(fileName);
+//        processMap();
         originFileProcessAvg(fileName);
     }
 
@@ -92,17 +99,17 @@ public class Statistic {
                 String[] data = line.split(",");
 
                 if (data.length == 3) {
-                    int rid = Integer.parseInt(data[2]);
+                    int rid = Integer.parseInt(data[0]);
                     String node = data[1];
-                    int time = Integer.parseInt(data[0]);
+                    int time = Integer.parseInt(data[2]);
                     ridNodeTimes.computeIfAbsent(rid, obj -> new HashMap<>()).put(node, time);
                 }
                 else {
-                    String coordinator = data[0];
-                    String processor1 = data[1];
-                    String processor2 = data[2];
-                    String processor3 = data[3];
-                    int rid = Integer.parseInt(data[4]);
+                    int rid = Integer.parseInt(data[0]);
+                    String coordinator = data[1];
+                    String processor1 = data[2];
+                    String processor2 = data[3];
+                    String processor3 = data[4];
 
                     List<String> nodes = ridNodes.computeIfAbsent(rid, obj -> new ArrayList<>());
                     nodes.add(coordinator);

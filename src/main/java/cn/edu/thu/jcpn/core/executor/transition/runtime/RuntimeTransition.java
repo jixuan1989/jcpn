@@ -145,23 +145,14 @@ public class RuntimeTransition implements IRuntimeExecutor {
     public void checkNewlyTokens4Firing() {
         // for each partition, get available tokens under the conditions.
         cache.keySet().forEach(partition -> {
-            cleanIfHasOnFireListeners(partition);
             List<InputToken> availableTokens = new ArrayList<>();
 
             InputToken tokenSet = new InputToken();
             findAndSave(partition, tokenSet, availableTokens, 0);
             cache.get(partition).addAll(availableTokens);
+
+//            checkNewTokens(partition);
         });
-    }
-
-    private void cleanIfHasOnFireListeners(ContainerPartition partition) {
-        List<IRuntimeContainer> partitionContainers = partition.getCids().stream().map(cid -> inContainers.get(cid)).
-                collect(Collectors.toList());
-
-        boolean needClean = partitionContainers.stream().filter(container -> container instanceof RuntimePlace).
-                anyMatch(container -> ((RuntimePlace) container).hasOnFireListener());
-
-        if (needClean) cache.get(partition).clear();
     }
 
     private void findAndSave(ContainerPartition partition, InputToken tokenSet, List<InputToken> availableTokens, int position) {
@@ -212,16 +203,90 @@ public class RuntimeTransition implements IRuntimeExecutor {
         return false;
     }
 
+//    private void checkNewTokens(ContainerPartition partition) {
+//        List<InputToken> partitionCache = cache.computeIfAbsent(partition, obj -> new ArrayList<>());
+//
+//        List<Integer> cids = partition.getCids();
+//        Map<Integer, List<IToken>> cidTokens = new HashMap<>();
+//        cids.forEach(cid -> cidTokens.put(cid, getTokens(cid)));
+//        if (cidTokens.values().stream().anyMatch(tokens -> tokens.size() == 0)) return;
+//
+//        Map<Integer, Integer> cidIndexes = new HashMap<>();
+//        cids.forEach(cid -> cidIndexes.put(cid, 0));
+//
+//        while (notFinish(cidTokens, cidIndexes)) {
+//            InputToken inputToken = getInputToken(cidTokens, cidIndexes);
+//            if (condition.test(partition, inputToken) && containNew(partition, inputToken)) partitionCache.add(inputToken);
+//
+//            increaseIndex(cids, cidTokens, cidIndexes);
+//        }
+//
+//        InputToken inputToken = getInputToken(cidTokens, cidIndexes);
+//        if (condition.test(partition, inputToken) && containNew(partition, inputToken)) partitionCache.add(inputToken);
+//    }
+//
+//    private InputToken getInputToken(Map<Integer, List<IToken>> cidTokens, Map<Integer, Integer> cidIndexes) {
+//        InputToken inputToken = new InputToken();
+//        cidIndexes.forEach((cid, index) -> inputToken.addToken(cid, cidTokens.get(cid).get(index)));
+//        return inputToken;
+//    }
+//
+//    private boolean notFinish(Map<Integer, List<IToken>> cidTokens, Map<Integer, Integer> cidIndexes) {
+//        return cidIndexes.entrySet().stream().anyMatch(entry -> entry.getValue() + 1 < cidTokens.get(entry.getKey()).size());
+//    }
+//
+//    private void increaseIndex(List<Integer> cids, Map<Integer, List<IToken>> cidTokens, Map<Integer, Integer> cidIndexes) {
+//        int count = 0;
+//        int cid = cids.get(count);
+//        int index = cidIndexes.get(cid);
+//        int size = cidTokens.get(cid).size();
+//
+//        int newIndex = (index + 1) % size;
+//        cidIndexes.put(cid, newIndex);
+//
+//        int carry = (index + 1) / size;
+//        while (carry != 0) {
+//            ++count;
+//            cid = cids.get(count);
+//            index = cidIndexes.get(cid);
+//            size = cidTokens.get(cid).size();
+//
+//            newIndex = (index + 1) % size;
+//            cidIndexes.put(cid, newIndex);
+//
+//            carry = (index + 1) / size;
+//        }
+//    }
+
     public boolean canFire() {
         return cache.values().stream().noneMatch(List::isEmpty);
     }
 
     public InputToken getInputToken() {
         InputToken inputToken = new InputToken();
-        if (canFire()) {
-            cache.values().forEach(partitionTokens -> inputToken.merge(partitionTokens.get(0)));
-        }
+        if (!canFire()) return inputToken;
 
+        Random random = new Random();
+        cache.forEach(((partition, inputTokens) -> {
+            int count = 0;
+            int cid = -1;
+            for (int partitionCid : partition.getCids()) {
+                if (inContainers.get(partitionCid).getName().equals("writing queue"))  {
+                    cid = partitionCid;
+                }
+            }
+
+            if (cid != -1) {
+                while (inputTokens.get(count).get(cid).isLocal() &&
+                        count + 1 < inputTokens.size() &&
+                        random.nextInt(1000) > 875) {
+                    ++count;
+                }
+            }
+            inputToken.merge(inputTokens.get(count));
+        }));
+
+        //cache.values().forEach(partitionTokens -> inputToken.merge(partitionTokens.get(0)));
         return inputToken;
     }
 

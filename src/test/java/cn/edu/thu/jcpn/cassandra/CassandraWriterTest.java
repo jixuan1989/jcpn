@@ -41,8 +41,6 @@ public class CassandraWriterTest {
 
     private static Logger logger = LogManager.getLogger();
 
-    private static Random random = new Random();
-
     private static int SERVER_NUMBER = 10;
     private static int CLIENT_NUMBER = 10;
 
@@ -105,7 +103,7 @@ public class CassandraWriterTest {
             RequestToken request = (RequestToken) inputToken.get(place200.getId());
             IToken socket = inputToken.get(place201.getId());
 
-            long effective = 300;
+            long effective = 555;
             //long effective = (long) requestInterval.sample();
             request.setTimeCost(effective);
             outputToken.addToken(request.getOwner(), place200.getId(), request);
@@ -153,13 +151,13 @@ public class CassandraWriterTest {
             RequestToken request = (RequestToken) inputToken.get(place100.getId());
             HashToken hashToken = (HashToken) inputToken.get(storage101.getId());
 
-            INode owner = request.getOwner();
-            List<INode> nodes = hashToken.getNodes();
-            INode next = nodes.get(0);
-            return servers.indexOf(next) == (servers.indexOf(owner) + 1) % SERVER_NUMBER;
+//            INode owner = request.getOwner();
+//            List<INode> nodes = hashToken.getNodes();
+//            INode next = nodes.get(0);
+//            return servers.indexOf(next) == (servers.indexOf(owner) + 1) % SERVER_NUMBER;
 
-//            int hashCode = request.getKey().hashCode() % SERVER_NUMBER;
-//            return hashCode == hashToken.getHashCode();
+            int hashCode = request.getKey().hashCode() % SERVER_NUMBER;
+            return hashCode == hashToken.getHashCode();
         }, place100, storage101);
 
         transition100.addOutContainer(place102).addOutContainer(place103).addOutContainer(place104);
@@ -526,19 +524,29 @@ public class CassandraWriterTest {
 //            }
 //        };
 //
-//        IPlaceMonitor placeMonitor = new IPlaceMonitor() {
-//            @Override
-//            public void reportAfterTokensAdded(INode owner, int placeId, String placeName, Collection<IToken> newTokens, INode from, int transitionId, String transitionName, Collection<IToken> timeout, Collection<IToken> tested, Collection<IToken> newly, Collection<IToken> future) {
-//                newTokens.forEach(token -> {
-//                    if (token instanceof MessageToken) {
-//                        MessageToken msgToken = (MessageToken) token;
-//                        if (msgToken.getType().equals(TokenType.WRITE)) {
-//                            logger.info(() -> String.format("%d,%d,%s,to", msgToken.getRid(), msgToken.getTime(), msgToken.getTo()));
-//                        }
-//                    }
-//                });
-//            }
-//        };
+        IPlaceMonitor placeMonitor = new IPlaceMonitor() {
+            @Override
+            public void reportAfterTokensAdded(INode owner, int placeId, String placeName, Collection<IToken> newTokens, INode from, int transitionId, String transitionName, Collection<IToken> timeout, Collection<IToken> tested, Collection<IToken> newly, Collection<IToken> future) {
+                newTokens.forEach(token -> {
+                    if (token instanceof MessageToken) {
+                        MessageToken msgToken = (MessageToken) token;
+                        if (msgToken.getType().equals(TokenType.WRITE)) {
+                            logger.info(() -> String.format("%d,%d,%s,to", msgToken.getRid(), msgToken.getTime(), msgToken.getTo()));
+                        }
+                    }
+                });
+            }
+        };
+
+        IPlaceMonitor placeMonitor109 = new IPlaceMonitor() {
+            @Override
+            public void reportAfterTokensAdded(INode owner, int placeId, String placeName, Collection<IToken> newTokens, INode from, int transitionId, String transitionName, Collection<IToken> timeout, Collection<IToken> tested, Collection<IToken> newly, Collection<IToken> future) {
+                newTokens.forEach(token -> {
+                    ResponseToken response = (ResponseToken) token;
+                    logger.info(() -> String.format("%d,%d", response.getRid(), response.getTime()));
+                });
+            }
+        };
 
         IPlaceMonitor placeMonitor102 = new IPlaceMonitor() {
             @Override
@@ -553,14 +561,15 @@ public class CassandraWriterTest {
             public void reportAfterTokenConsumed(long time, INode owner, int placeId, String placeName, IToken consumed, int transitionId,
                                                  String transitionName, Collection<IToken> timeout, Collection<IToken> tested,
                                                  Collection<IToken> newly, Collection<IToken> future) {
-                StringBuilder stringBuilder = new StringBuilder();
-                tested.forEach(token -> {
-                    WriteToken writeToken1 = (WriteToken) token;
-                    stringBuilder.append(String.format("%d,%d\t", writeToken1.getRid(), writeToken1.getTime()));
-                });
+//                StringBuilder stringBuilder = new StringBuilder();
+//                tested.forEach(token -> {
+//                    WriteToken writeToken1 = (WriteToken) token;
+//                    stringBuilder.append(String.format("%d,%d\t", writeToken1.getRid(), writeToken1.getTime()));
+//                });
 
                 WriteToken writeToken = (WriteToken) consumed;
-                logger.info(() -> String.format("%d,%d,%d,%s,out--->%s", writeToken.getRid(), writeToken.getTime(), time, owner, stringBuilder.toString()));
+//                logger.info(() -> String.format("%d,%d,%d,%s,out--->%s", writeToken.getRid(), writeToken.getTime(), time, owner, stringBuilder.toString()));
+                logger.info(() -> String.format("%d,%d,%s,out", writeToken.getRid(), time, owner));
             }
         };
 
@@ -579,10 +588,9 @@ public class CassandraWriterTest {
         //instance.addMonitor(place100.getId(), placeMonitor100);
         instance.addMonitor(storage106.getId(), storageMonitor106);
 //        instance.addMonitor(place102.getId(), placeMonitor102);
-        //instance.addMonitor(place107.getId(), placeMonitor102);
         instance.addMonitor(transition100.getId(), transitionMonitor100);
-        //instance.addMonitor(place104.getId(), placeMonitor);
-        //instance.addMonitor(place102.getId(), placeMonitor102);
+//        instance.addMonitor(place104.getId(), placeMonitor);
+        instance.addMonitor(place109.getId(), placeMonitor109);
         instance.setMaximumExecutionTime(1000000L * Integer.valueOf(System.getProperty("maxTime", "100")));//us
     }
 
