@@ -5,6 +5,7 @@ import cn.edu.thu.jcpn.core.container.runtime.IRuntimeContainer;
 import cn.edu.thu.jcpn.core.container.runtime.RuntimePlace;
 import cn.edu.thu.jcpn.core.container.Storage;
 import cn.edu.thu.jcpn.core.container.runtime.RuntimeStorage;
+import cn.edu.thu.jcpn.core.executor.transition.condition.ContainerPartition;
 import cn.edu.thu.jcpn.core.monitor.IPlaceMonitor;
 import cn.edu.thu.jcpn.core.executor.IRuntimeExecutor;
 import cn.edu.thu.jcpn.core.monitor.IStorageMonitor;
@@ -172,13 +173,7 @@ public class RuntimeIndividualCPN {
      */
     public void notifyTransitions() {
         transitions.values().forEach(RuntimeTransition::checkNewlyTokens4Firing);
-
-        containers.values().forEach(container -> {
-            if (container instanceof RuntimePlace) {
-                RuntimePlace place = (RuntimePlace) container;
-                place.markTokensAsTested();
-            }
-        });
+        containers.values().forEach(IRuntimeContainer::markTokensAsTested);
     }
 
     /**
@@ -219,10 +214,27 @@ public class RuntimeIndividualCPN {
 
 
     public OutputToken fire(RuntimeTransition transition) {
+//        if (transition.getName().equals("write")) {//TODO
+//            long count = containers.entrySet().stream().filter(entry -> {
+//                if (entry.getValue() instanceof RuntimePlace) {
+//                    RuntimePlace place = (RuntimePlace) entry.getValue();
+//                    if (place.getName().equals("writing queue")) {
+//                        return place.getTestedTokens().size() > 5 ||
+//                                place.getNewlyTokens().size() > 5 ||
+//                                place.getFutureTokens().size() > 5;
+//                    }
+//                }
+//                return false;
+//            }).count();
+//            if (count == 1) {
+//                System.out.println("here");
+//            }
+//        }//TODO
+
         InputToken inputToken = transition.getInputToken();
         removeFromPlaces(inputToken);
         removeFromTransitions(inputToken);
-        reportAfterTokenConsumed(inputToken, transition);
+        reportAfterTokenConsumed(globalClock.getTime(), inputToken, transition);
 
         OutputToken outputToken = transition.firing(inputToken);
         reportAfterFired(transition, inputToken, outputToken);
@@ -262,21 +274,21 @@ public class RuntimeIndividualCPN {
         });
     }
 
-    private void reportAfterTokenConsumed(InputToken inputToken, RuntimeTransition transition) {
-        inputToken.forEach((pid, token) -> this.reportAfterTokenConsumed(pid, token, transition));
+    private void reportAfterTokenConsumed(long time, InputToken inputToken, RuntimeTransition transition) {
+        inputToken.forEach((pid, token) -> this.reportAfterTokenConsumed(time, pid, token, transition));
     }
 
-    private void reportAfterTokenConsumed(int pid, IToken token, RuntimeTransition transition) {
+    private void reportAfterTokenConsumed(long time, int pid, IToken token, RuntimeTransition transition) {
         if (!placeMonitors.containsKey(pid)) return;
 
         IPlaceMonitor monitor = placeMonitors.get(pid);
         RuntimePlace place = (RuntimePlace) containers.get(pid);
-        monitor.reportAfterTokenConsumed(owner, pid, place.getName(), token, transition.getId(),
+        monitor.reportAfterTokenConsumed(time, owner, pid, place.getName(), token, transition.getId(),
                 transition.getName(), place.getTimeoutTokens(), place.getTestedTokens(), place.getNewlyTokens(),
                 place.getFutureTokens());
 
         Map<TokenType, Map<INode, Collection<IToken>>> pidAllTokens = getPidAllTokens(pid);
-        monitor.reportAfterTokenConsumed(owner, pid, place.getName(), token, pidAllTokens.get(TIMEOUT),
+        monitor.reportAfterTokenConsumed(time, owner, pid, place.getName(), token, pidAllTokens.get(TIMEOUT),
                 pidAllTokens.get(TESTED), pidAllTokens.get(NEWLY), pidAllTokens.get(FUTURE));
     }
 
@@ -306,7 +318,7 @@ public class RuntimeIndividualCPN {
         else {
             IStorageMonitor monitor = storageMonitors.get(id);
             RuntimeStorage storage = (RuntimeStorage) containers.get(id);
-            tokens.forEach(token -> monitor.reportAfterTokensAdded(globalClock.getTime(), owner, storage.getName(), token));
+            tokens.forEach(token -> monitor.reportAfterTokensAdded(token.getTime(), owner, storage.getName(), token));
         }
     }
 
@@ -314,8 +326,11 @@ public class RuntimeIndividualCPN {
     private void reportAfterFired(RuntimeTransition transition, InputToken inputToken, OutputToken outputToken) {
         if (!transitionMonitors.containsKey(transition.getId())) return;
 
+        Map<ContainerPartition, List<InputToken>> cache = transition.getCache();
+
         ITransitionMonitor monitor = transitionMonitors.get(transition.getId());
         monitor.reportWhenFiring(globalClock.getTime(), owner, transition.getId(), transition.getName(), inputToken, outputToken);
+        monitor.reportWhenFiring(inputToken, cache);
     }
 
     private Map<TokenType, Map<INode, Collection<IToken>>> getPidAllTokens(int pid) {
@@ -350,10 +365,5 @@ public class RuntimeIndividualCPN {
     @Override
     public String toString() {
         return "ICPN [owner=" + owner + ", container=" + containers + ", transition=" + transitions + "]";
-    }
-
-    public void logStatus() {
-        System.out.println("--------------------------------node: " + owner + "----------------------------------");
-        containers.values().forEach(IRuntimeContainer::logStatus);
     }
 }

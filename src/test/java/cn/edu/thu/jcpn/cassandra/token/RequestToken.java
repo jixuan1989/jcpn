@@ -2,12 +2,14 @@ package cn.edu.thu.jcpn.cassandra.token;
 
 import cn.edu.thu.jcpn.core.runtime.tokens.IToken;
 
+import java.util.concurrent.atomic.AtomicInteger;
+
 /**
  * Created by leven on 2017/1/6.
  */
 public class RequestToken extends IToken {
 
-    private static int count = 0;
+    private static AtomicInteger count = new AtomicInteger(0);
 
     private int id;
     private String key;
@@ -17,7 +19,7 @@ public class RequestToken extends IToken {
 
     public RequestToken(String key, String value, int consistency) {
         super();
-        this.id = count++;
+        this.id = count.incrementAndGet();
         this.key = key;
         this.value = value;
         this.consistency = consistency;

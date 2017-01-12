@@ -8,7 +8,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static cn.edu.thu.jcpn.core.container.Place.PlaceStrategy.*;
 import static cn.edu.thu.jcpn.core.container.Place.PlaceType.*;
 
 public class Place implements IContainer {
@@ -19,20 +18,13 @@ public class Place implements IContainer {
     private String name;
 
     private PlaceType type;
-    private PlaceStrategy strategy;
+
+    private IOnFireListener onFireListener;
 
     /**
      * <owner, tokens for this owner>
      */
     private Map<INode, List<IToken>> initTokens;
-
-    /**
-     * <br>BAG : random sort the tokens.
-     * <br>FIFO : sort the tokens by their time, if exists tokens having same time, random sort this range tokens.
-     */
-    public enum PlaceStrategy {
-        BAG, FIFO
-    }
 
     public enum PlaceType {
         LOCAL, COMMUNICATING
@@ -41,7 +33,6 @@ public class Place implements IContainer {
     private Place() {
         this.id = count++;
         type = LOCAL;
-        strategy = BAG;
         initTokens = new HashMap<>();
     }
 
@@ -53,14 +44,6 @@ public class Place implements IContainer {
     public Place(String name, PlaceType type) {
         this(name);
         this.type = type;
-    }
-
-    public PlaceStrategy getPlaceStrategy() {
-        return strategy;
-    }
-
-    public void setPlaceStrategy(PlaceStrategy strategy) {
-        this.strategy = strategy;
     }
 
     public int getId() {
@@ -81,6 +64,14 @@ public class Place implements IContainer {
 
     public void setType(PlaceType type) {
         this.type = type;
+    }
+
+    public IOnFireListener getOnFireListener() {
+        return onFireListener;
+    }
+
+    public void setOnFireListener(IOnFireListener onFireListener) {
+        this.onFireListener = onFireListener;
     }
 
     public Map<INode, List<IToken>> getInitTokens() {

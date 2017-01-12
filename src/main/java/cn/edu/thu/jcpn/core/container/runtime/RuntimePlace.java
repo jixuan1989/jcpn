@@ -1,6 +1,8 @@
 package cn.edu.thu.jcpn.core.container.runtime;
 
+import cn.edu.thu.jcpn.core.container.IOnFireListener;
 import cn.edu.thu.jcpn.core.container.Place;
+import cn.edu.thu.jcpn.core.container.Place.*;
 import cn.edu.thu.jcpn.core.runtime.GlobalClock;
 import cn.edu.thu.jcpn.core.runtime.tokens.INode;
 import cn.edu.thu.jcpn.core.runtime.tokens.IToken;
@@ -15,8 +17,9 @@ public class RuntimePlace implements IRuntimeContainer {
     private String name;
     protected INode owner;
 
-    private Place.PlaceType type;
-    private Place.PlaceStrategy placeStrategy;
+    private PlaceType type;
+
+    private IOnFireListener onFireListener;
 
     /**
      * If it is a local place, then it only has a LocalAsTarget in the three tokenMaps.
@@ -30,7 +33,7 @@ public class RuntimePlace implements IRuntimeContainer {
     private List<IToken> testedTokens;
     private List<IToken> timeoutTokens;
 
-    private int timeout;
+    private int timeout; // TODO add an example.
 
     private GlobalClock globalClock;
     private static Random random = new Random();
@@ -40,7 +43,7 @@ public class RuntimePlace implements IRuntimeContainer {
         this.id = place.getId();
         this.name = place.getName();
         this.type = place.getType();
-        this.placeStrategy = place.getPlaceStrategy();
+        this.onFireListener = place.getOnFireListener();
 
         this.futureTokens = new CopyOnWriteArrayList<>();
         this.newlyTokens = new CopyOnWriteArrayList<>();
@@ -61,16 +64,20 @@ public class RuntimePlace implements IRuntimeContainer {
         return name;
     }
 
-    public Place.PlaceStrategy getPlaceStrategy() {
-        return placeStrategy;
-    }
-
     public INode getOwner() {
         return owner;
     }
 
-    public void setOwner(INode owner) {
-        this.owner = owner;
+    public PlaceType getType() {
+        return type;
+    }
+
+    public boolean hasOnFireListener() {
+        return onFireListener != null;
+    }
+
+    public IOnFireListener getOnFireListener() {
+        return onFireListener;
     }
 
     public List<IToken> getFutureTokens() {
@@ -98,21 +105,7 @@ public class RuntimePlace implements IRuntimeContainer {
     public void addToken(IToken token) {
         if (null == token) return;
 
-        if (this.getPlaceStrategy().equals(Place.PlaceStrategy.BAG)) {
-            addTokenBAG(token);
-        } else {
-            addTokenFIFO(token);
-        }
-    }
-
-    private void addTokenBAG(IToken token) {
-        if (token.getTime() > globalClock.getTime()) {
-            int position = random.nextInt(futureTokens.size() + 1);
-            futureTokens.add(position, token);
-        } else {
-            int position = random.nextInt(newlyTokens.size() + 1);
-            newlyTokens.add(position, token);
-        }
+        addTokenFIFO(token);
     }
 
     private void addTokenFIFO(IToken token) {
@@ -133,6 +126,11 @@ public class RuntimePlace implements IRuntimeContainer {
      * @param token  new token that to be added
      */
     protected void addTokenByTimeOrder(List<IToken> tokens, IToken token) {
+        if (tokens.isEmpty()) {
+            tokens.add(token);
+            return;
+        }
+
         int start = 0;
         int end = tokens.size() - 1;
         while (start + 1 < end) {
@@ -212,27 +210,5 @@ public class RuntimePlace implements IRuntimeContainer {
 
     public boolean removeTokenFromTest(IToken token) {
         return testedTokens.remove(token);
-    }
-
-    public void logStatus() {
-        StringBuilder sb = new StringBuilder();
-        sb.append("\t\tTimeout:");
-        if (timeoutTokens.size() > 0) {
-            timeoutTokens.forEach(token -> sb.append("\t" + token.toString()));
-        }
-        sb.append("\n\t\tTested:");
-        if (testedTokens.size() > 0) {
-            testedTokens.forEach(token -> sb.append("\t" + token.toString()));
-        }
-        sb.append("\n\t\tNewly:");
-        if (newlyTokens.size() > 0) {
-            newlyTokens.forEach(token -> sb.append("\t" + token.toString()));
-        }
-        sb.append("\n\t\tFuture:");
-        if (futureTokens.size() > 0) {
-            futureTokens.forEach(token -> sb.append("\t" + token.toString()));
-        }
-        System.out.println(String.format("\t%d: %s", id, getName()));
-        System.out.println(sb.toString());
     }
 }

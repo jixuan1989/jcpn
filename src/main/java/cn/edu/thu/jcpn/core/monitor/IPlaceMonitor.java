@@ -11,7 +11,7 @@ import java.util.Map;
  */
 public interface IPlaceMonitor {
 
-    default void reportAfterTokenConsumed(INode owner, int placeId, String placeName, IToken consumed, int transitionId,
+    default void reportAfterTokenConsumed(long time, INode owner, int placeId, String placeName, IToken consumed, int transitionId,
                                           String transitionName, Collection<IToken> timeout, Collection<IToken> tested,
                                           Collection<IToken> newly, Collection<IToken> future) {
     }
@@ -21,7 +21,7 @@ public interface IPlaceMonitor {
                                         Collection<IToken> tested, Collection<IToken> newly, Collection<IToken> future) {
     }
 
-    default void reportAfterTokenConsumed(INode owner, int placeId, String placeName, IToken consumed,
+    default void reportAfterTokenConsumed(long time, INode owner, int placeId, String placeName, IToken consumed,
                                           Map<INode, Collection<IToken>> timeout,
                                           Map<INode, Collection<IToken>> tested,
                                           Map<INode, Collection<IToken>> newly,

@@ -20,5 +20,11 @@ public interface IRuntimeContainer {
 
     List<IToken> reassignTokens();
 
-    void logStatus();
+    List<IToken> getTestedTokens();
+
+    List<IToken> getNewlyTokens();
+
+    boolean hasNewlyTokens();
+
+    void markTokensAsTested();
 }
