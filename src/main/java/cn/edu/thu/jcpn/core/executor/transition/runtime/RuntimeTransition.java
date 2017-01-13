@@ -306,7 +306,7 @@ public class RuntimeTransition implements IRuntimeExecutor {
             if (cid != -1) {
                 while (inputTokens.get(count).get(cid).isLocal() &&
                         count + 1 < inputTokens.size() &&
-                        random.nextInt(1000) > 875) {
+                        random.nextInt(1000) > x) {
                     ++count;
                 }
             }

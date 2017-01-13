@@ -56,6 +56,8 @@ public class CassandraWriter {
     private static int WRITE_THREADS = Integer.valueOf(System.getProperty("write_threads", "2"));
     private static int ACK_THREADS = Integer.valueOf(System.getProperty("ack_threads", "2"));
 
+    private static int MAX_REQUEST=Integer.valueOf(System.getProperty("max_request", "20000"))+10;
+
     private RuntimeFoldingCPN instance;
 
     private Properties empiricalDistributions = new Properties();
@@ -117,7 +119,7 @@ public class CassandraWriter {
             outputToken.addToken(socket.getOwner(), place201.getId(), socket);
 
             RequestToken received = new RequestToken(RandomStringUtils.random(4), request.getValue(), request.getConsistency());
-            if (received.getId() < 20010) {
+            if (received.getId() < MAX_REQUEST) {
                 received.setFrom(socket.getOwner());
                 received.setTimeCost(effective);
                 outputToken.addToken(socket.getTo(), place100.getId(), received);
