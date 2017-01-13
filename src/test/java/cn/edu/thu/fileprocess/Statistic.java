@@ -19,6 +19,9 @@ public class Statistic {
     // rid; coordinator, processor1, processor2, processor3
     static Map<Integer, List<String>> ridNodes = new TreeMap<>();
 
+    static String x = "0.5";
+    static String path = "/Users/leven/Desktop/experiment/res3/" + x + "/";
+
     static void originFileProcessAvg(String fileName) {
         Map<String, Map<String, Integer>> in104 = new HashMap<>();
         Map<String, Map<String, Integer>> in102 = new HashMap<>();
@@ -82,7 +85,7 @@ public class Statistic {
     }
 
     public static void main(String[] args) throws IOException {
-        String fileName = "src/test/resources/output/test.log";
+        String fileName = path + "test.log";
         //originFileProcess(fileName);
         classifyProcess(fileName);
         processMap();
@@ -91,14 +94,18 @@ public class Statistic {
 
     static void classifyProcess(String fileName) {
         // rid, node, finishTime.
-        ridNodeTimes = new HashMap<>();
-        ridNodes = new HashMap<>();
+        ridNodeTimes = new TreeMap<>();
+        ridNodes = new TreeMap<>();
 
         try (Stream<String> stream = Files.lines(Paths.get(fileName))) {
+            int runtime = 0;
             stream.forEach(line -> {
                 String[] data = line.split(",");
 
-                if (data.length == 3) {
+                if (null == data || data.length <= 2) {
+                    ;
+                }
+                else if (data.length == 3) {
                     int rid = Integer.parseInt(data[0]);
                     String node = data[1];
                     int time = Integer.parseInt(data[2]);
@@ -152,10 +159,12 @@ public class Statistic {
             }
         });
 
-        String fileName1 = "src/test/resources/process/co2pro.csv";
+        masterSlaves.sort((a, b) -> a.compareTo(b));
+        String fileName1 = path + "co2pro.csv";
         write(fileName1, masterSlaves);
 
-        String fileName2 = "src/test/resources/process/pro2pro.csv";
+        slaves.sort((a, b) -> a.compareTo(b));
+        String fileName2 = path + "pro2pro.csv";
         write(fileName2, slaves);
     }
 
