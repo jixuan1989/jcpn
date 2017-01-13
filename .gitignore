@@ -4,7 +4,6 @@ src/test/resources/*
 .classpath
 .project
 .settings
-bin
 .idea
 *.ipr
 *.iws
