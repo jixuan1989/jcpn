@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
     <configuration status="OFF">
         <appenders>
-            <RollingFile name="RollingFile" fileName="src/test/resources/output/test2.log"
-                         filePattern="src/test/resources/output/$${date:yyyy-MM}/app-%d{MM-dd-yyyy}-%i.log.gz">
-                <PatternLayout pattern="%d{yyyy-MM-dd 'at' HH:mm:ss z} %-5level %class{36} %L %M - %msg%xEx%n"/>
-                <SizeBasedTriggeringPolicy size="1KB"/>
-                <!-- DefaultRolloverStrategy属性如不设置，则默认为最多同一文件夹下7个文件，这里设置了20 -->
-                <DefaultRolloverStrategy max="20"/>
-            </RollingFile>
+            <!--<RollingFile name="RollingFile" fileName="src/test/resources/output/test2.log"-->
+                         <!--filePattern="src/test/resources/output/$${date:yyyy-MM}/app-%d{MM-dd-yyyy}-%i.log.gz">-->
+                <!--<PatternLayout pattern="%d{yyyy-MM-dd 'at' HH:mm:ss z} %-5level %class{36} %L %M - %msg%xEx%n"/>-->
+                <!--<SizeBasedTriggeringPolicy size="1KB"/>-->
+                <!--&lt;!&ndash; DefaultRolloverStrategy属性如不设置，则默认为最多同一文件夹下7个文件，这里设置了20 &ndash;&gt;-->
+                <!--<DefaultRolloverStrategy max="20"/>-->
+            <!--</RollingFile>-->
 
             <File name="log" fileName="src/test/resources/output/test.log" append="false">
                 <PatternLayout pattern="%msg%xEx%n"/>

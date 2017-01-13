@@ -277,7 +277,6 @@ public class RuntimeTransition implements IRuntimeExecutor {
     */
 
     // x < 1
-    /**
     public InputToken getInputToken() {
         InputToken inputToken = new InputToken();
         if (!canFire()) return inputToken;
@@ -297,7 +296,7 @@ public class RuntimeTransition implements IRuntimeExecutor {
             if (cid != -1) {
                 while (inputTokens.get(count).get(cid).isLocal() &&
                         count + 1 < inputTokens.size() &&
-                        random.nextInt(100) > 50) {
+                        random.nextInt(100) > 75) {
                     ++count;
                 }
             }
@@ -307,9 +306,9 @@ public class RuntimeTransition implements IRuntimeExecutor {
 
         return inputToken;
     }
-    */
 
     // x > 1 and is discrete value.
+    /**
     private Map<Long, Integer> moveDistance;
     public InputToken getInputToken() {
         InputToken inputToken = new InputToken();
@@ -326,7 +325,7 @@ public class RuntimeTransition implements IRuntimeExecutor {
             }
 
             if (cid != -1) {
-                int delay = 1;
+                int delay = 4;
                 if (moveDistance == null) moveDistance = new HashMap<>();
 
                 IToken token = inputToken1.get(cid);
@@ -346,6 +345,7 @@ public class RuntimeTransition implements IRuntimeExecutor {
 
         return inputToken;
     }
+    */
 
     /**
      * @param inputToken
