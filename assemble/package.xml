@@ -12,8 +12,8 @@
             <outputDirectory>bin</outputDirectory>
         </fileSet>
         <fileSet>
-            <directory>release-files/config-template</directory>
-            <outputDirectory>config</outputDirectory>
+            <directory>release-files/conf-template</directory>
+            <outputDirectory>conf</outputDirectory>
         </fileSet>
     </fileSets>
     <dependencySets>
