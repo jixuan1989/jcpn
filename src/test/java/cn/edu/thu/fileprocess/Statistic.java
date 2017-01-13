@@ -84,9 +84,9 @@ public class Statistic {
     public static void main(String[] args) throws IOException {
         String fileName = "src/test/resources/output/test.log";
         //originFileProcess(fileName);
-//        classifyProcess(fileName);
-//        processMap();
-        originFileProcessAvg(fileName);
+        classifyProcess(fileName);
+        processMap();
+//        originFileProcessAvg(fileName);
     }
 
     static void classifyProcess(String fileName) {
