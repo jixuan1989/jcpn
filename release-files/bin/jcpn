@@ -39,7 +39,7 @@ if [ -z $JAVA ] ; then
     exit 1;
 fi
 #JVM_OPTS="$JVM_OPTS -Daaa"
-cassandra_params="$cassandra_params -Dcassandra.config=exp3.properties -Ddistributions=empiricalDistribution"
+cassandra_params="$cassandra_params -Dcassandra.config=${JCPN_CONF}/exp3.properties -Ddistributions=${JCPN_CONF}/empiricalDistribution"
 
 classname="model.cassandra.CassandraWriter"
 
