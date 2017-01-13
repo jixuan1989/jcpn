@@ -169,7 +169,7 @@ public class CassandraWriterTest {
             List<INode> toNodes = hashToken.getNodes();
 
             long effective = (long) lookupTimeCost2.sample();
-            toNodes.forEach(to -> {
+            toNodes.stream().forEach(to -> {
                 if (to.equals(owner)) {
                     WriteToken toWrite = new WriteToken(request.getId(), request.getKey(), request.getValue());
                     toWrite.setFrom(owner);
