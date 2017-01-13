@@ -42,7 +42,7 @@ public class CassandraWriter {
     static{
         Properties properties = new Properties();
         try {
-            properties.load(new FileInputStream(System.getProperty("cassandra.config", "exp3.properties")));
+            properties.load(new FileInputStream(System.getProperty("cassandra.config", "release-files/conf-template/exp3.properties")));
         }catch(Exception e){
             logger.error(e);
         }
@@ -609,8 +609,9 @@ public class CassandraWriter {
         long end = System.currentTimeMillis();
         System.out.println(end - start);
     }
-    public static void main(String[] args){
+    public static void main(String[] args) throws IOException {
         CassandraWriter  cassandraWriter= new CassandraWriter();
+        cassandraWriter.initCassandraWriter();
         long start = System.currentTimeMillis();
         while (cassandraWriter.instance.hasNextTime()) {
             cassandraWriter.instance.nextRound();

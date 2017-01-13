@@ -9,7 +9,7 @@
                 <DefaultRolloverStrategy max="20"/>
             </RollingFile>
 
-            <File name="log" fileName="src/test/resources/output/test.log" append="false">
+            <File name="log" fileName="logs/test.log" append="false">
                 <PatternLayout pattern="%msg%xEx%n"/>
             </File>
 
