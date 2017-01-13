@@ -1,14 +1,13 @@
-package cn.edu.thu.jcpn.cassandra;
+package model.cassandra;
 
-import cn.edu.thu.jcpn.cassandra.token.*;
-import cn.edu.thu.jcpn.cassandra.token.ResponseToken.ResponseType;
+import model.cassandra.token.*;
+import model.cassandra.token.ResponseToken.ResponseType;
 import cn.edu.thu.jcpn.common.CommonUtil;
 import cn.edu.thu.jcpn.core.cpn.CPN;
 import cn.edu.thu.jcpn.core.cpn.runtime.RuntimeFoldingCPN;
 import cn.edu.thu.jcpn.core.container.Place;
 import cn.edu.thu.jcpn.core.container.Place.PlaceType;
 import cn.edu.thu.jcpn.core.executor.recoverer.Recoverer;
-import cn.edu.thu.jcpn.core.executor.transition.condition.ContainerPartition;
 import cn.edu.thu.jcpn.core.monitor.IPlaceMonitor;
 import cn.edu.thu.jcpn.core.monitor.IStorageMonitor;
 import cn.edu.thu.jcpn.core.monitor.ITransitionMonitor;
@@ -24,9 +23,9 @@ import org.apache.commons.math3.distribution.UniformRealDistribution;
 import org.apache.commons.math3.random.EmpiricalDistribution;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.junit.Before;
-import org.junit.Test;
 
+
+import java.io.FileInputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.*;
@@ -37,24 +36,31 @@ import static cn.edu.thu.jcpn.core.executor.transition.Transition.TransitionType
 /**
  * Created by leven on 2016/12/25.
  */
-public class CassandraWriterTest {
+public class CassandraWriter {
 
     private static Logger logger = LogManager.getLogger();
+    static{
+        Properties properties = new Properties();
+        try {
+            properties.load(new FileInputStream(System.getProperty("cassandra.config", "exp3.properties")));
+        }catch(Exception e){
+            logger.error(e);
+        }
+    }
+    private static int SERVER_NUMBER = Integer.valueOf(System.getProperty("server_number", "10"));
+    private static int CLIENT_NUMBER =  Integer.valueOf(System.getProperty("client_number", "10"));
 
-    private static int SERVER_NUMBER = 10;
-    private static int CLIENT_NUMBER = 10;
+    private static int REPLICA = Integer.valueOf(System.getProperty("replica", "3"));
+    private static int CONSISTENCY = Integer.valueOf(System.getProperty("consistency", "2"));
 
-    private static int REPLICA = 3;
-    private static int CONSISTENCY = 2;
-
-    private static int WRITE_THREADS = 2; // 2, 4, 6.
-    private static int ACK_THREADS = 2; // 2, 4, 6.
+    private static int WRITE_THREADS = Integer.valueOf(System.getProperty("write_threads", "2"));
+    private static int ACK_THREADS = Integer.valueOf(System.getProperty("ack_threads", "2"));
 
     private RuntimeFoldingCPN instance;
 
     private Properties empiricalDistributions = new Properties();
 
-    @Before
+
     public void initCassandraWriter() throws IOException {
 
         instance = new RuntimeFoldingCPN();
@@ -594,11 +600,20 @@ public class CassandraWriterTest {
         instance.setMaximumExecutionTime(1000000L * Integer.valueOf(System.getProperty("maxTime", "100")));//us
     }
 
-//    @Test
+
     public void test0() throws InterruptedException {
         long start = System.currentTimeMillis();
         while (instance.hasNextTime()) {
             instance.nextRound();
+        }
+        long end = System.currentTimeMillis();
+        System.out.println(end - start);
+    }
+    public static void main(String[] args){
+        CassandraWriter  cassandraWriter= new CassandraWriter();
+        long start = System.currentTimeMillis();
+        while (cassandraWriter.instance.hasNextTime()) {
+            cassandraWriter.instance.nextRound();
         }
         long end = System.currentTimeMillis();
         System.out.println(end - start);
