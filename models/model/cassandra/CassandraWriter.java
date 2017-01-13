@@ -39,24 +39,24 @@ import static cn.edu.thu.jcpn.core.executor.transition.Transition.TransitionType
 public class CassandraWriter {
 
     private static Logger logger = LogManager.getLogger();
+    private static Properties properties = new Properties();
     static{
-        Properties properties = new Properties();
         try {
             properties.load(new FileInputStream(System.getProperty("cassandra.config", "release-files/conf-template/exp3.properties")));
         }catch(Exception e){
             logger.error(e);
         }
     }
-    private static int SERVER_NUMBER = Integer.valueOf(System.getProperty("server_number", "10"));
-    private static int CLIENT_NUMBER =  Integer.valueOf(System.getProperty("client_number", "10"));
+    private static int SERVER_NUMBER = Integer.valueOf(properties.getProperty("server_number", "10"));
+    private static int CLIENT_NUMBER =  Integer.valueOf(properties.getProperty("client_number", "10"));
 
-    private static int REPLICA = Integer.valueOf(System.getProperty("replica", "3"));
-    private static int CONSISTENCY = Integer.valueOf(System.getProperty("consistency", "2"));
+    private static int REPLICA = Integer.valueOf(properties.getProperty("replica", "3"));
+    private static int CONSISTENCY = Integer.valueOf(properties.getProperty("consistency", "2"));
 
-    private static int WRITE_THREADS = Integer.valueOf(System.getProperty("write_threads", "2"));
-    private static int ACK_THREADS = Integer.valueOf(System.getProperty("ack_threads", "2"));
+    private static int WRITE_THREADS = Integer.valueOf(properties.getProperty("write_threads", "2"));
+    private static int ACK_THREADS = Integer.valueOf(properties.getProperty("ack_threads", "2"));
 
-    private static int MAX_REQUEST=Integer.valueOf(System.getProperty("max_request", "20000"))+10;
+    private static int MAX_REQUEST=Integer.valueOf(properties.getProperty("max_request", "20000"))+10;
 
     private RuntimeFoldingCPN instance;
 
@@ -615,6 +615,7 @@ public class CassandraWriter {
         CassandraWriter  cassandraWriter= new CassandraWriter();
         cassandraWriter.initCassandraWriter();
         long start = System.currentTimeMillis();
+        System.out.println("max requests:" + MAX_REQUEST);
         while (cassandraWriter.instance.hasNextTime()) {
             cassandraWriter.instance.nextRound();
         }
