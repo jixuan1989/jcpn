@@ -1,4 +1,4 @@
-package cn.edu.thu.fileprocess;
+package model.cassandra.fileprocess;
 
 import java.io.BufferedWriter;
 import java.io.IOException;
@@ -19,8 +19,8 @@ public class Statistic {
     // rid; coordinator, processor1, processor2, processor3
     static Map<Integer, List<String>> ridNodes = new TreeMap<>();
 
-    static String x = "0.5";
-    static String path = "/Users/leven/Desktop/experiment/res3/" + x + "/";
+    //static String x = "0.5";
+    static String path = null;
 
     static void originFileProcessAvg(String fileName) {
         Map<String, Map<String, Integer>> in104 = new HashMap<>();
@@ -85,6 +85,7 @@ public class Statistic {
     }
 
     public static void main(String[] args) throws IOException {
+        path=args[0];
         String fileName = path + "test.log";
         //originFileProcess(fileName);
         classifyProcess(fileName);
