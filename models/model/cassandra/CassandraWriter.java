@@ -1,7 +1,7 @@
-package cn.edu.thu.jcpn.cassandra;
+package model.cassandra;
 
-import cn.edu.thu.jcpn.cassandra.token.*;
-import cn.edu.thu.jcpn.cassandra.token.ResponseToken.ResponseType;
+import model.cassandra.token.*;
+import model.cassandra.token.ResponseToken.ResponseType;
 import cn.edu.thu.jcpn.common.CommonUtil;
 import cn.edu.thu.jcpn.core.cpn.CPN;
 import cn.edu.thu.jcpn.core.cpn.runtime.RuntimeFoldingCPN;
@@ -23,9 +23,9 @@ import org.apache.commons.math3.distribution.UniformRealDistribution;
 import org.apache.commons.math3.random.EmpiricalDistribution;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.junit.Before;
-import org.junit.Test;
 
+
+import java.io.FileInputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.*;
@@ -36,24 +36,33 @@ import static cn.edu.thu.jcpn.core.executor.transition.Transition.TransitionType
 /**
  * Created by leven on 2016/12/25.
  */
-public class CassandraWriterTest {
+public class CassandraWriter {
 
     private static Logger logger = LogManager.getLogger();
+    private static Properties properties = new Properties();
+    static{
+        try {
+            properties.load(new FileInputStream(System.getProperty("cassandra.config", "release-files/conf-template/exp3.properties")));
+        }catch(Exception e){
+            logger.error(e);
+        }
+    }
+    private static int SERVER_NUMBER = Integer.valueOf(properties.getProperty("server_number", "10"));
+    private static int CLIENT_NUMBER =  Integer.valueOf(properties.getProperty("client_number", "10"));
 
-    private static int SERVER_NUMBER = 10;
-    private static int CLIENT_NUMBER = 10;
+    private static int REPLICA = Integer.valueOf(properties.getProperty("replica", "3"));
+    private static int CONSISTENCY = Integer.valueOf(properties.getProperty("consistency", "2"));
 
-    private static int REPLICA = 3;
-    private static int CONSISTENCY = 2;
+    private static int WRITE_THREADS = Integer.valueOf(properties.getProperty("write_threads", "2"));
+    private static int ACK_THREADS = Integer.valueOf(properties.getProperty("ack_threads", "2"));
 
-    private static int WRITE_THREADS = 2; // 2, 4, 6.
-    private static int ACK_THREADS = 2; // 2, 4, 6.
+    private static int MAX_REQUEST=Integer.valueOf(properties.getProperty("max_request", "20000"))+10;
 
     private RuntimeFoldingCPN instance;
 
     private Properties empiricalDistributions = new Properties();
 
-    @Before
+
     public void initCassandraWriter() throws IOException {
 
         instance = new RuntimeFoldingCPN();
@@ -95,7 +104,7 @@ public class CassandraWriterTest {
 
         Transition transition200 = new Transition("make request", TransitionType.TRANSMIT);
         transition200.addInContainer(place200).addInContainer(place201);
-        transition200.addOutContainer(place200).addOutContainer(place201).addOutContainer(place100);
+        transition200.addOutContainer(place100);
         transition200.setTransferFunction(inputToken -> {
             OutputToken outputToken = new OutputToken();
 
@@ -110,7 +119,7 @@ public class CassandraWriterTest {
             outputToken.addToken(socket.getOwner(), place201.getId(), socket);
 
             RequestToken received = new RequestToken(RandomStringUtils.random(4), request.getValue(), request.getConsistency());
-            if (received.getId() < 1000) {
+            if (received.getId() < MAX_REQUEST) {
                 received.setFrom(socket.getOwner());
                 received.setTimeCost(effective);
                 outputToken.addToken(socket.getTo(), place100.getId(), received);
@@ -168,7 +177,7 @@ public class CassandraWriterTest {
             List<INode> toNodes = hashToken.getNodes();
 
             long effective = (long) lookupTimeCost2.sample();
-            toNodes.forEach(to -> {
+            toNodes.stream().forEach(to -> {
                 if (to.equals(owner)) {
                     WriteToken toWrite = new WriteToken(request.getId(), request.getKey(), request.getValue());
                     toWrite.setFrom(owner);
@@ -585,20 +594,30 @@ public class CassandraWriterTest {
         /**************************************************************************************************************/
 
         //instance.addMonitor(place100.getId(), placeMonitor100);
-        //instance.addMonitor(storage106.getId(), storageMonitor106);
+        instance.addMonitor(storage106.getId(), storageMonitor106);
 //        instance.addMonitor(place102.getId(), placeMonitor102);
-//        instance.addMonitor(transition100.getId(), transitionMonitor100);
+        instance.addMonitor(transition100.getId(), transitionMonitor100);
 //        instance.addMonitor(place104.getId(), placeMonitor);
-//        instance.addMonitor(place109.getId(), placeMonitor109);
+        instance.addMonitor(place109.getId(), placeMonitor109);
         instance.setMaximumExecutionTime(1000000L * Integer.valueOf(System.getProperty("maxTime", "100")));//us
     }
 
-//    @Test
+
     public void test0() throws InterruptedException {
-        int times = 1000;
         long start = System.currentTimeMillis();
         while (instance.hasNextTime()) {
-            instance.nextRound(start, times);
+            instance.nextRound();
+        }
+        long end = System.currentTimeMillis();
+        System.out.println(end - start);
+    }
+    public static void main(String[] args) throws IOException {
+        CassandraWriter  cassandraWriter= new CassandraWriter();
+        cassandraWriter.initCassandraWriter();
+        long start = System.currentTimeMillis();
+        System.out.println("max requests:" + MAX_REQUEST);
+        while (cassandraWriter.instance.hasNextTime()) {
+            cassandraWriter.instance.nextRound();
         }
         long end = System.currentTimeMillis();
         System.out.println(end - start);

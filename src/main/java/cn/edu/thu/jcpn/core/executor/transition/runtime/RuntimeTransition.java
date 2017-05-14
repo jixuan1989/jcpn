@@ -304,9 +304,19 @@ public class RuntimeTransition implements IRuntimeExecutor {
         return inputToken;
     }
 
-    // x < 1
     /**
-    public InputToken getInputToken() {
+    public InputToken getInputToken(){// x is used for cassandra experiments..
+        int x= Integer.valueOf(System.getProperty("x","0"));
+        if(x<0){
+            return getProbabilityInputToken(0-x);
+        }else{
+            return getDiscreteInputToken(x);
+        }
+    }
+
+    // x < 1
+
+    private InputToken getProbabilityInputToken(int x) {
         InputToken inputToken = new InputToken();
         if (!canFire()) return inputToken;
 
@@ -324,8 +334,7 @@ public class RuntimeTransition implements IRuntimeExecutor {
 
             if (cid != -1) {
                 while (inputTokens.get(count).get(cid).isLocal() &&
-                        count + 1 < inputTokens.size() &&
-                        random.nextInt(1000) > 875) {
+                        count + 1 < inputTokens.size() && random.nextInt(1000) > x) {
                     ++count;
                 }
             }
@@ -337,10 +346,10 @@ public class RuntimeTransition implements IRuntimeExecutor {
     }
     */
 
+
     // x > 1 and is discrete value.
-    /**
     private Map<Long, Integer> moveDistance;
-    public InputToken getInputToken() {
+    private InputToken getDiscreteInputToken(int x) {
         InputToken inputToken = new InputToken();
         if (!canFire()) return inputToken;
 
@@ -355,12 +364,11 @@ public class RuntimeTransition implements IRuntimeExecutor {
             }
 
             if (cid != -1) {
-                int delay = 4;
                 if (moveDistance == null) moveDistance = new HashMap<>();
 
                 IToken token = inputToken1.get(cid);
                 int distance = moveDistance.getOrDefault(token.getTime(), 0);
-                while (token.isLocal() && distance < delay && inputTokens.size() > 1) {
+                while (token.isLocal() && distance < x && inputTokens.size() > 1) {
                     inputTokens.add(1, inputToken1);
                     moveDistance.put(token.getTime(), ++distance);
                     inputToken1 = inputTokens.get(0);
@@ -375,7 +383,6 @@ public class RuntimeTransition implements IRuntimeExecutor {
 
         return inputToken;
     }
-    */
 
     /**
      * @param inputToken
