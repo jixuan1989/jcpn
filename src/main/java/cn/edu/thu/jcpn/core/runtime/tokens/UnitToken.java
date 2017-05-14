@@ -18,6 +18,11 @@ public class UnitToken extends IToken {
         return "UnitToken {from=" + from + ",owner=" + owner + ",to=" + to + ",time=" + time + "}";
     }
 
+    public UnitToken(INode from, INode owner, INode to) {
+        super(from, owner, to);
+        time = GlobalClock.getInstance().getTime();
+    }
+
     public UnitToken() {
         super();
         time = GlobalClock.getInstance().getTime();

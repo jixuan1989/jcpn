@@ -77,8 +77,10 @@ public class RuntimeStorage implements IRuntimeContainer {
         tokens.forEach(this::addToken);
     }
 
-    public void addToken(IToken token) {
+    private void addToken(IToken token) {
         if (null == token) return;
+
+        // remove the tokens which are meet the replace function from tested queue and newly queue.
         if(replaceStrategy != null) {
             Collection<IToken> removed = testedTokens.stream().
                     filter(availableToken -> replaceStrategy.test(token, availableToken)).collect(Collectors.toList());

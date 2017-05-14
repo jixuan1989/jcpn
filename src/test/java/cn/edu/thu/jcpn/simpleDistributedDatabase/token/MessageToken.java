@@ -1,4 +1,4 @@
-package cn.edu.thu.jcpn.elements.token;
+package cn.edu.thu.jcpn.simpleDistributedDatabase.token;
 
 import cn.edu.thu.jcpn.core.runtime.tokens.INode;
 import cn.edu.thu.jcpn.core.runtime.tokens.IToken;

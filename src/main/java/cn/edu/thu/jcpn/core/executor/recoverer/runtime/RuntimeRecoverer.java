@@ -48,12 +48,10 @@ public class RuntimeRecoverer implements IRuntimeExecutor {
         this.globalClock = GlobalClock.getInstance();
     }
 
-    @Override
     public int getId() {
         return id;
     }
 
-    @Override
     public String getName() {
         return name;
     }

@@ -55,9 +55,11 @@ public class RuntimeIndividualCPN {
 
     private RuntimeFoldingCPN foldingCPN;
 
+    private boolean mode;
+
     private GlobalClock globalClock = GlobalClock.getInstance();
 
-    RuntimeIndividualCPN(INode owner, RuntimeFoldingCPN foldingCPN) {
+    RuntimeIndividualCPN(INode owner, RuntimeFoldingCPN foldingCPN, boolean mode) {
         this.owner = owner;
         this.containers = new HashMap<>();
         this.transitions = new HashMap<>();
@@ -69,6 +71,8 @@ public class RuntimeIndividualCPN {
         this.recoverers = new HashMap<>();
 
         this.foldingCPN = foldingCPN;
+
+        this.mode = mode;
     }
 
     public INode getOwner() {
@@ -89,6 +93,10 @@ public class RuntimeIndividualCPN {
 
     public IPlaceMonitor getPlaceMonitor(int pid) {
         return placeMonitors.get(pid);
+    }
+
+    public IStorageMonitor getStorageMonitor(int sid) {
+        return storageMonitors.get(sid);
     }
 
     public ITransitionMonitor getTransitionMonitor(int tid) {
@@ -119,7 +127,7 @@ public class RuntimeIndividualCPN {
 
 
     private void addTransition(Transition transition) {
-        transitions.put(transition.getId(), new RuntimeTransition(owner, transition, containers, foldingCPN));
+        transitions.put(transition.getId(), new RuntimeTransition(owner, transition, containers, mode));
     }
 
     public void addMonitor(int tid, ITransitionMonitor monitor) {
@@ -146,16 +154,8 @@ public class RuntimeIndividualCPN {
         recoverers.forEach(this::addRecoverer);
     }
 
-    //TODO need to register a event?
-    public void addPlaceTokens(Integer pid, List<IToken> tokens) {
-        RuntimePlace instance = (RuntimePlace) containers.get(pid);
-        synchronized (instance) {
-            instance.addTokens(tokens);
-        }
-    }
-
     /**
-     * neaten places: for each place, reassign the tokens according their time.
+     * neaten places: for each container, reassign the tokens according their time.
      * For future tokens, assign them to the newly tokens if their time are arrived.
      * For tested tokens, assign them to the timeout tokens if their time are timeout.
      */
@@ -163,7 +163,10 @@ public class RuntimeIndividualCPN {
         for (IRuntimeContainer container : containers.values()) {
             int cid = container.getId();
             List<IToken> timeoutTokens = container.reassignTokens();
-            transitions.values().forEach(transition -> transition.removeTokenFromCache(cid, timeoutTokens));
+
+            if (!timeoutTokens.isEmpty()) {
+                transitions.values().forEach(transition -> transition.removeTokenFromCache(cid, timeoutTokens));
+            }
         }
     }
 
@@ -174,6 +177,7 @@ public class RuntimeIndividualCPN {
     public void notifyTransitions() {
         transitions.values().forEach(RuntimeTransition::checkNewlyTokens4Firing);
         containers.values().forEach(IRuntimeContainer::markTokensAsTested);
+
     }
 
     /**
@@ -214,23 +218,6 @@ public class RuntimeIndividualCPN {
 
 
     public OutputToken fire(RuntimeTransition transition) {
-//        if (transition.getName().equals("write")) {//TODO
-//            long count = containers.entrySet().stream().filter(entry -> {
-//                if (entry.getValue() instanceof RuntimePlace) {
-//                    RuntimePlace place = (RuntimePlace) entry.getValue();
-//                    if (place.getName().equals("writing queue")) {
-//                        return place.getTestedTokens().size() > 5 ||
-//                                place.getNewlyTokens().size() > 5 ||
-//                                place.getFutureTokens().size() > 5;
-//                    }
-//                }
-//                return false;
-//            }).count();
-//            if (count == 1) {
-//                System.out.println("here");
-//            }
-//        }//TODO
-
         InputToken inputToken = transition.getInputToken();
         removeFromPlaces(inputToken);
         removeFromTransitions(inputToken);

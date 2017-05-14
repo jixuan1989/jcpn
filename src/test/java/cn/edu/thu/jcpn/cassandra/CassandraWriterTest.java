@@ -8,7 +8,6 @@ import cn.edu.thu.jcpn.core.cpn.runtime.RuntimeFoldingCPN;
 import cn.edu.thu.jcpn.core.container.Place;
 import cn.edu.thu.jcpn.core.container.Place.PlaceType;
 import cn.edu.thu.jcpn.core.executor.recoverer.Recoverer;
-import cn.edu.thu.jcpn.core.executor.transition.condition.ContainerPartition;
 import cn.edu.thu.jcpn.core.monitor.IPlaceMonitor;
 import cn.edu.thu.jcpn.core.monitor.IStorageMonitor;
 import cn.edu.thu.jcpn.core.monitor.ITransitionMonitor;
@@ -96,7 +95,7 @@ public class CassandraWriterTest {
 
         Transition transition200 = new Transition("make request", TransitionType.TRANSMIT);
         transition200.addInContainer(place200).addInContainer(place201);
-        transition200.addOutContainer(place100);
+        transition200.addOutContainer(place200).addOutContainer(place201).addOutContainer(place100);
         transition200.setTransferFunction(inputToken -> {
             OutputToken outputToken = new OutputToken();
 
@@ -111,7 +110,7 @@ public class CassandraWriterTest {
             outputToken.addToken(socket.getOwner(), place201.getId(), socket);
 
             RequestToken received = new RequestToken(RandomStringUtils.random(4), request.getValue(), request.getConsistency());
-            if (received.getId() < 20010) {
+            if (received.getId() < 1000) {
                 received.setFrom(socket.getOwner());
                 received.setTimeCost(effective);
                 outputToken.addToken(socket.getTo(), place100.getId(), received);
@@ -169,7 +168,7 @@ public class CassandraWriterTest {
             List<INode> toNodes = hashToken.getNodes();
 
             long effective = (long) lookupTimeCost2.sample();
-            toNodes.stream().forEach(to -> {
+            toNodes.forEach(to -> {
                 if (to.equals(owner)) {
                     WriteToken toWrite = new WriteToken(request.getId(), request.getKey(), request.getValue());
                     toWrite.setFrom(owner);
@@ -586,19 +585,20 @@ public class CassandraWriterTest {
         /**************************************************************************************************************/
 
         //instance.addMonitor(place100.getId(), placeMonitor100);
-        instance.addMonitor(storage106.getId(), storageMonitor106);
+        //instance.addMonitor(storage106.getId(), storageMonitor106);
 //        instance.addMonitor(place102.getId(), placeMonitor102);
-        instance.addMonitor(transition100.getId(), transitionMonitor100);
+//        instance.addMonitor(transition100.getId(), transitionMonitor100);
 //        instance.addMonitor(place104.getId(), placeMonitor);
-        instance.addMonitor(place109.getId(), placeMonitor109);
+//        instance.addMonitor(place109.getId(), placeMonitor109);
         instance.setMaximumExecutionTime(1000000L * Integer.valueOf(System.getProperty("maxTime", "100")));//us
     }
 
     @Test
     public void test0() throws InterruptedException {
+        int times = 1000;
         long start = System.currentTimeMillis();
         while (instance.hasNextTime()) {
-            instance.nextRound();
+            instance.nextRound(start, times);
         }
         long end = System.currentTimeMillis();
         System.out.println(end - start);

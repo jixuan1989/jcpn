@@ -74,14 +74,6 @@ public class Place implements IContainer {
         this.onFireListener = onFireListener;
     }
 
-    public Map<INode, List<IToken>> getInitTokens() {
-        return initTokens;
-    }
-
-    public void setInitTokens(Map<INode, List<IToken>> initTokens) {
-        this.initTokens = initTokens;
-    }
-
     public void addInitTokens(INode owner, List<IToken> tokens) {
         tokens.forEach(token -> addInitToken(null, owner, null, token));
     }

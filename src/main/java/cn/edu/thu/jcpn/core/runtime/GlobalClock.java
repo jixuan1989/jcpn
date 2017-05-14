@@ -49,16 +49,16 @@ public class GlobalClock {
         timelineForRemoteEvents.computeIfAbsent(absolutiveTime, obj -> Collections.newSetFromMap(new ConcurrentHashMap<>())).add(node);
     }
 
-    public boolean hasNextRunningTime() {
+    public boolean hasNextLocalTime() {
         return !timelineForLocalEvents.isEmpty();
     }
 
-    public boolean hasNextSendingTime() {
+    public boolean hasNextRemoteTime() {
         return !timelineForRemoteEvents.isEmpty();
     }
 
     public boolean hasNextTime() {
-        return hasNextRunningTime() || hasNextSendingTime();
+        return hasNextLocalTime() || hasNextRemoteTime();
     }
 
     /**

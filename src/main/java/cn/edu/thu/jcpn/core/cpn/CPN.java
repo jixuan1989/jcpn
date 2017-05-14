@@ -1,7 +1,6 @@
 package cn.edu.thu.jcpn.core.cpn;
 
 import cn.edu.thu.jcpn.core.container.IContainer;
-import cn.edu.thu.jcpn.core.container.Place;
 import cn.edu.thu.jcpn.core.executor.recoverer.Recoverer;
 import cn.edu.thu.jcpn.core.executor.transition.Transition;
 
@@ -9,12 +8,9 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
-/**
- * Created by hxd on 16/5/14.
- */
 public class CPN {
 
-    private static int count = 0;
+    private static int count = 0; // id counter of the CPN.
 
     private int id;
     private String name;
@@ -52,16 +48,8 @@ public class CPN {
         containers.put(container.getId(), container);
     }
 
-    public IContainer getContainer(int cid) {
-        return containers.get(cid);
-    }
-
     public Map<Integer, Transition> getTransitions() {
         return transitions;
-    }
-
-    public void setTransitions(Map<Integer, Transition> transitions) {
-        this.transitions = transitions;
     }
 
     public void addTransitions(Transition... transitions) {
@@ -74,10 +62,6 @@ public class CPN {
 
     public Map<Integer, Recoverer> getRecoverers() {
         return recoverers;
-    }
-
-    public void setRecoverers(Map<Integer, Recoverer> recoverers) {
-        this.recoverers = recoverers;
     }
 
     public void addRecoverers(Recoverer... recoverers) {

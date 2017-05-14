@@ -27,6 +27,8 @@ public class Transition {
     private Condition condition;
     private Function<InputToken, OutputToken> transferFunction;
 
+    private boolean autoMode;
+
     /**
      * The tokens in some places obey FIFO.
      * If two places have FIFO stragety and both them are input places, we are not sure which one  is the first-class citizen.

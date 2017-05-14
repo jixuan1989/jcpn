@@ -19,7 +19,7 @@ public class Statistic {
     // rid; coordinator, processor1, processor2, processor3
     static Map<Integer, List<String>> ridNodes = new TreeMap<>();
 
-    static String x = "0.5";
+    static String x = "0.875";
     static String path = "/Users/leven/Desktop/experiment/res3/" + x + "/";
 
     static void originFileProcessAvg(String fileName) {

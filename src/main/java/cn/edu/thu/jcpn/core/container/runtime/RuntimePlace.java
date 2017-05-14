@@ -7,6 +7,7 @@ import cn.edu.thu.jcpn.core.runtime.GlobalClock;
 import cn.edu.thu.jcpn.core.runtime.tokens.INode;
 import cn.edu.thu.jcpn.core.runtime.tokens.IToken;
 
+import java.security.Key;
 import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.stream.Collectors;
@@ -33,7 +34,7 @@ public class RuntimePlace implements IRuntimeContainer {
     private List<IToken> testedTokens;
     private List<IToken> timeoutTokens;
 
-    private int timeout; // TODO add an example.
+    private int timeout;
 
     private GlobalClock globalClock;
     private static Random random = new Random();
@@ -102,13 +103,9 @@ public class RuntimePlace implements IRuntimeContainer {
         tokens.forEach(this::addToken);
     }
 
-    public void addToken(IToken token) {
+    private void addToken(IToken token) {
         if (null == token) return;
 
-        addTokenFIFO(token);
-    }
-
-    private void addTokenFIFO(IToken token) {
         if (token.getTime() > globalClock.getTime()) {
             addTokenByTimeOrder(futureTokens, token);
         } else {
@@ -125,7 +122,7 @@ public class RuntimePlace implements IRuntimeContainer {
      * @param tokens existing tokens
      * @param token  new token that to be added
      */
-    protected void addTokenByTimeOrder(List<IToken> tokens, IToken token) {
+    private void addTokenByTimeOrder(List<IToken> tokens, IToken token) {
         if (tokens.isEmpty()) {
             tokens.add(token);
             return;

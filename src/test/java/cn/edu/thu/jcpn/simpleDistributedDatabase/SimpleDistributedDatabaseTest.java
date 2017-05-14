@@ -1,18 +1,14 @@
-package cn.edu.thu.jcpn.runtime;
+package cn.edu.thu.jcpn.simpleDistributedDatabase;
 
 import cn.edu.thu.jcpn.core.cpn.CPN;
 import cn.edu.thu.jcpn.core.cpn.runtime.RuntimeFoldingCPN;
-import cn.edu.thu.jcpn.core.monitor.ITransitionMonitor;
 import cn.edu.thu.jcpn.core.container.Place;
 import cn.edu.thu.jcpn.core.container.Place.PlaceType;
-import cn.edu.thu.jcpn.core.runtime.GlobalClock;
 import cn.edu.thu.jcpn.core.runtime.tokens.*;
 import cn.edu.thu.jcpn.core.executor.transition.Transition;
 import cn.edu.thu.jcpn.core.executor.transition.Transition.TransitionType;
 import cn.edu.thu.jcpn.core.executor.transition.condition.OutputToken;
-import cn.edu.thu.jcpn.elements.token.MessageToken;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import cn.edu.thu.jcpn.simpleDistributedDatabase.token.MessageToken;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -25,9 +21,7 @@ import java.util.stream.IntStream;
  */
 public class SimpleDistributedDatabaseTest {
 
-    private static Logger logger = LogManager.getLogger();
-
-    private static int SERVER_NUMBER = 2;
+    private static int SERVER_NUMBER = 1024;
 
     private CPN cpn;
     private List<INode> nodes;
@@ -59,11 +53,11 @@ public class SimpleDistributedDatabaseTest {
         //p1中保存每个服务器的一个token,用unitToken表示
         nodes.forEach(node -> place1.addInitToken(node, new UnitToken()));
 
-        place3.addInitToken(null, nodes.get(0), nodes.get(1), new MessageToken(0));
         //p3中保存消息
         //p4中保存每个服务器和别的服务器的套接字token,也用unitColor表示
         nodes.forEach(owner -> nodes.stream().filter(to -> !to.equals(owner)).
                 forEach(to -> {
+                    place3.addInitToken(null, owner, to, new MessageToken(0));
                     place4.addInitToken(null, owner, to, new UnitToken());
                 }));
 
@@ -71,13 +65,15 @@ public class SimpleDistributedDatabaseTest {
         transition1.setTransferFunction(
                 inputToken -> {
                     OutputToken outputToken = new OutputToken();
+
                     MessageToken received = (MessageToken) inputToken.get(place2.getId());
+                    IToken thread = inputToken.get(place1.getId());
+
                     MessageToken toSend = new MessageToken(received.getMessage() + 1);
                     toSend.setTo(received.getFrom());
                     toSend.setTimeCost(1);
                     outputToken.addToken(received.getOwner(), place3.getId(), toSend);
 
-                    IToken thread = inputToken.get(place1.getId());
                     thread.setTimeCost(1);
                     outputToken.addToken(thread.getOwner(), place1.getId(), thread);
 
@@ -88,13 +84,15 @@ public class SimpleDistributedDatabaseTest {
         transition2.setTransferFunction(
                 inputToken -> {
                     OutputToken outputToken = new OutputToken();
+
                     MessageToken toSend = (MessageToken) inputToken.get(place3.getId());
+                    IToken socket = inputToken.get(place4.getId());
+
                     MessageToken received = new MessageToken(toSend.getMessage() + 1);
                     received.setFrom(toSend.getOwner());
                     received.setTimeCost(1);
                     outputToken.addToken(toSend.getTo(), place2.getId(), received);
 
-                    IToken socket = inputToken.get(place4.getId());
                     socket.setTimeCost(1);
                     outputToken.addToken(socket.getOwner(), place4.getId(), socket);
 
@@ -106,7 +104,6 @@ public class SimpleDistributedDatabaseTest {
         cpn.addTransitions(transition1, transition2);
         instance = new RuntimeFoldingCPN();
         instance.setVersion("1.0");
-
         instance.addCpn(cpn, nodes);
 
 //        ITransitionMonitor transitionMonitor = (time, owner, transitionId, transitionName, inputToken, outputToken) -> System.out.println(owner + "'s " + transitionName + " is fired");
@@ -117,9 +114,12 @@ public class SimpleDistributedDatabaseTest {
     @Test
     public void test0() throws InterruptedException {
         int count = 0;
+        long start = System.currentTimeMillis();
         while (instance.hasNextTime()) {
-            instance.nextRound();
-            if (count++ == 66) break;
+            instance.nextRound(start, 10);
+            //if (count++ == Integer) break;
         }
+        long end = System.currentTimeMillis();
+        System.out.println((end - start) + ",5");
     }
 }

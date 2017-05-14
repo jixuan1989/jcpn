@@ -2,11 +2,11 @@ package cn.edu.thu.jcpn.core.cpn.runtime;
 
 import cn.edu.thu.jcpn.common.Triple;
 import cn.edu.thu.jcpn.core.container.IContainer;
+import cn.edu.thu.jcpn.core.container.runtime.InsertAgencyManager;
 import cn.edu.thu.jcpn.core.cpn.CPN;
 import cn.edu.thu.jcpn.core.monitor.IPlaceMonitor;
 import cn.edu.thu.jcpn.core.monitor.IStorageMonitor;
 import cn.edu.thu.jcpn.core.monitor.ITransitionMonitor;
-import cn.edu.thu.jcpn.core.container.Place;
 import cn.edu.thu.jcpn.core.runtime.GlobalClock;
 import cn.edu.thu.jcpn.core.runtime.GlobalClock.EventType;
 import cn.edu.thu.jcpn.core.runtime.tokens.INode;
@@ -17,18 +17,34 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import static cn.edu.thu.jcpn.core.runtime.GlobalClock.EventType.LOCAL;
 
 public class RuntimeFoldingCPN {
+
+    private AtomicInteger totalTimes = new AtomicInteger(0);
 
     private static Logger logger = LogManager.getLogger();
 
     private String version;
 
+    // an Engine can be auto(true) mode or manual mode(false).
+    private boolean mode;
+
+    // a CPN represents one part of the system. Servers in a cluster is a cpn, also are the clients.
     private Set<CPN> cpns;
+
+    // all nodes in the foldingCPN, no matter servers or clients.
     private List<INode> nodes;
+
+    // all individual part of the foldingCPN, each one represents a real node, likes a server or a client.
     private Map<INode, RuntimeIndividualCPN> nodeIndividualCPNs;
 
+    private InsertAgencyManager insertAgencyManager;
+
     private GlobalClock globalClock;
+
     /**
      * set the maximal execution time of the foldingCPN.
      * (because some type of foldingCPN can execute forever,
@@ -43,6 +59,9 @@ public class RuntimeFoldingCPN {
 
         this.globalClock = GlobalClock.getInstance();
         this.maximumExecutionTime = Long.MAX_VALUE;
+
+        InsertAgencyManager.init(this);
+        insertAgencyManager = InsertAgencyManager.getInstance();
     }
 
     public String getVersion() {
@@ -51,6 +70,14 @@ public class RuntimeFoldingCPN {
 
     public void setVersion(String version) {
         this.version = version;
+    }
+
+    public boolean getMode() {
+        return mode;
+    }
+
+    public void setMode(boolean mode) {
+        this.mode = mode;
     }
 
     public Set<CPN> getCpns() {
@@ -89,6 +116,7 @@ public class RuntimeFoldingCPN {
         nodeIndividualCPNs.values().stream().filter(individualCPN -> individualCPN.getContainers().containsKey(sid)).
                 forEach(individualCPN -> addMonitor(individualCPN.getOwner(), sid, monitor));
     }
+
     public void addMonitor(INode node, int sid, IStorageMonitor monitor) {
         if (!nodeIndividualCPNs.containsKey(node) || !nodeIndividualCPNs.get(node).getContainers().containsKey(sid))
             return;
@@ -128,11 +156,11 @@ public class RuntimeFoldingCPN {
         Collection<Recoverer> recoverers = cpn.getRecoverers().values();
 
         nodes.forEach(node -> {
-            RuntimeIndividualCPN individualCPN = new RuntimeIndividualCPN(node, this);
+            RuntimeIndividualCPN individualCPN = new RuntimeIndividualCPN(node, this, mode);
             individualCPN.construct(containers, transitions, recoverers);
             nodeIndividualCPNs.put(node, individualCPN);
 
-            globalClock.addAbsoluteTimePointForRemoteHandle(node, 0L);
+            globalClock.addAbsoluteTimePointForLocalHandle(node, 0L);
         });
     }
 
@@ -159,20 +187,20 @@ public class RuntimeFoldingCPN {
     }
 
     /**
-     * @return whether the sending queue has events to do.
+     * @return whether the remote queue has events to do.
      */
-    public boolean hasNextSendingTime() {
-        return !isTimeout() && globalClock.hasNextSendingTime();
+    public boolean hasNextRemoteTime() {
+        return !isTimeout() && globalClock.hasNextRemoteTime();
     }
 
     /**
-     * @return whether the running queue has events to do.
+     * @return whether the local queue has events to do.
      */
-    public boolean hasNextRunningTime() {
-        return !isTimeout() && globalClock.hasNextRunningTime();
+    public boolean hasNextLocalTime() {
+        return !isTimeout() && globalClock.hasNextLocalTime();
     }
 
-    public boolean nextRound() {
+    public boolean nextRound(long start, int times) {
         if (!isTimeout() && !globalClock.hasNextTime()) {
             return false;
         }
@@ -186,11 +214,26 @@ public class RuntimeFoldingCPN {
         Set<INode> nodes = nextEventTimeNodes.getRight();
 
         logger.trace(() -> String.format("Run %s events... %s", eventType.toString(), nodes));
-        nodes.parallelStream().forEach(node -> runACPNInstance(getIndividualCPN(node)));
+        if (eventType.equals(LOCAL)) {
+            runLocalEvents(start, times);
+        } else {
+            runRemoteEvents();
+        }
+
         return true;
     }
 
-    private void runACPNInstance(RuntimeIndividualCPN individualCPN) {
+    private void runRemoteEvents() {
+        nodes.parallelStream().forEach(node -> insertAgencyManager.runAgencyEvents(node));
+    }
+
+    private void runLocalEvents(long start, int times) {
+        nodes.parallelStream().forEach(node -> this.runNodeLocalEvents(start, times, node));
+    }
+
+    private void runNodeLocalEvents(long start, int times, INode node) {
+        RuntimeIndividualCPN individualCPN = getIndividualCPN(node);
+
         individualCPN.neatenContainers();
         if (individualCPN.hasEnableRecoverers()) {
             individualCPN.fireAllRecoverers();
@@ -198,9 +241,20 @@ public class RuntimeFoldingCPN {
         }
 
         individualCPN.notifyTransitions();
+
+        int count = 0;
         while (individualCPN.hasEnableTransitions()) {
             RuntimeTransition transition = individualCPN.randomEnable();
             individualCPN.fire(transition);
+            ++count;
         }
+
+        int totalCount = totalTimes.addAndGet(count);
+        if (totalCount >= times) {
+            long end = System.currentTimeMillis();
+            System.out.println((end - start) + "," + totalCount);
+            System.exit(0);
+        }
+
     }
 }
