@@ -413,6 +413,7 @@ public class RuntimeTransition implements IRuntimeExecutor {
                 cidTokens.forEach((cid, tokens) -> {
                     insertAgencyManager.addTokens(to, cid, tokens);
                     tokens.forEach(token -> globalClock.addAbsoluteTimePointForRemoteHandle(to, token.getTime()));
+                    tokens.forEach(token -> globalClock.addAbsoluteTimePointForLocalHandle(to, token.getTime()));
                 });
             }
         }

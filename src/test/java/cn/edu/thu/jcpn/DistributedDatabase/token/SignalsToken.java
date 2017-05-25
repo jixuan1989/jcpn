@@ -16,15 +16,24 @@ public class SignalsToken extends IToken {
 
     private List<IToken> signals;
 
-    public SignalsToken(INode owner, List<INode> tos) {
+    public SignalsToken() {
         super();
-        this.signals = new CopyOnWriteArrayList<>();
+        this.signals = new ArrayList<>();
+    }
+
+    public SignalsToken(INode owner) {
+        this();
+        this.owner = owner;
+    }
+
+    public SignalsToken(INode owner, List<INode> tos) {
+        this();
         tos.stream().filter(to -> to != owner).forEach(to -> signals.add(new UnitToken(null, owner, to)));
     }
 
     public SignalsToken(SignalsToken other) {
-        super();
-        Collections.copy(this.signals, other.signals);
+        this();
+        other.signals.forEach(signal -> this.signals.add(new UnitToken(signal.getFrom(), signal.getOwner(), signal.getTo())));
     }
 
     public List<IToken> getSignals() {

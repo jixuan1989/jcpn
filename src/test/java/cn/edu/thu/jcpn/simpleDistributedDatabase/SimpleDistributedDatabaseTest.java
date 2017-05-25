@@ -4,6 +4,8 @@ import cn.edu.thu.jcpn.core.cpn.CPN;
 import cn.edu.thu.jcpn.core.cpn.runtime.RuntimeFoldingCPN;
 import cn.edu.thu.jcpn.core.container.Place;
 import cn.edu.thu.jcpn.core.container.Place.PlaceType;
+import cn.edu.thu.jcpn.core.executor.transition.condition.InputToken;
+import cn.edu.thu.jcpn.core.monitor.ITransitionMonitor;
 import cn.edu.thu.jcpn.core.runtime.tokens.*;
 import cn.edu.thu.jcpn.core.executor.transition.Transition;
 import cn.edu.thu.jcpn.core.executor.transition.Transition.TransitionType;
@@ -21,7 +23,7 @@ import java.util.stream.IntStream;
  */
 public class SimpleDistributedDatabaseTest {
 
-    private static int SERVER_NUMBER = 1024;
+    private static int SERVER_NUMBER = 128;
 
     private CPN cpn;
     private List<INode> nodes;
@@ -31,7 +33,6 @@ public class SimpleDistributedDatabaseTest {
     public void initSimpleDistributedDatabase() {
 
         cpn = new CPN("simpleDD");
-
 
         Place place1 = new Place("local", PlaceType.LOCAL);
         Place place2 = new Place("received", PlaceType.LOCAL);
@@ -106,9 +107,15 @@ public class SimpleDistributedDatabaseTest {
         instance.setVersion("1.0");
         instance.addCpn(cpn, nodes);
 
-//        ITransitionMonitor transitionMonitor = (time, owner, transitionId, transitionName, inputToken, outputToken) -> System.out.println(owner + "'s " + transitionName + " is fired");
-//        instance.addMonitor(transition1.getId(), transitionMonitor);
-//        instance.addMonitor(transition2.getId(), transitionMonitor);
+        ITransitionMonitor transitionMonitor = new ITransitionMonitor() {
+            @Override
+            public void reportWhenFiring(long currentTime, INode owner, int transitionId, String transitionName, InputToken inputToken, OutputToken outputToken) {
+                System.out.println(owner + "'s " + transitionName + " is fired");
+            }
+        };
+
+        instance.addMonitor(transition1.getId(), transitionMonitor);
+        instance.addMonitor(transition2.getId(), transitionMonitor);
     }
 
     @Test
@@ -116,7 +123,7 @@ public class SimpleDistributedDatabaseTest {
         int count = 0;
         long start = System.currentTimeMillis();
         while (instance.hasNextTime()) {
-            instance.nextRound(start, 10);
+            instance.nextRound(start, 100);
             //if (count++ == Integer) break;
         }
         long end = System.currentTimeMillis();

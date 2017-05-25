@@ -606,7 +606,7 @@ public class CassandraWriter {
     public void test0() throws InterruptedException {
         long start = System.currentTimeMillis();
         while (instance.hasNextTime()) {
-            instance.nextRound();
+            //instance.nextRound();
         }
         long end = System.currentTimeMillis();
         System.out.println(end - start);
@@ -617,7 +617,7 @@ public class CassandraWriter {
         long start = System.currentTimeMillis();
         System.out.println("max requests:" + MAX_REQUEST);
         while (cassandraWriter.instance.hasNextTime()) {
-            cassandraWriter.instance.nextRound();
+            //cassandraWriter.instance.nextRound();
         }
         long end = System.currentTimeMillis();
         System.out.println(end - start);

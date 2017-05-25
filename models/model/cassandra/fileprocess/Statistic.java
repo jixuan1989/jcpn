@@ -19,13 +19,8 @@ public class Statistic {
     // rid; coordinator, processor1, processor2, processor3
     static Map<Integer, List<String>> ridNodes = new TreeMap<>();
 
-<<<<<<< HEAD:src/test/java/cn/edu/thu/fileprocess/Statistic.java
-    static String x = "0.875";
-    static String path = "/Users/leven/Desktop/experiment/res3/" + x + "/";
-=======
     //static String x = "0.5";
     static String path = null;
->>>>>>> 18150023ffaf95f9c7d126d8dbdacffa9caea952:models/model/cassandra/fileprocess/Statistic.java
 
     static void originFileProcessAvg(String fileName) {
         Map<String, Map<String, Integer>> in104 = new HashMap<>();
@@ -165,11 +160,11 @@ public class Statistic {
             }
         });
 
-        masterSlaves.sort((a, b) -> a.compareTo(b));
+        masterSlaves.sort(Comparator.naturalOrder());
         String fileName1 = path + "co2pro.csv";
         write(fileName1, masterSlaves);
 
-        slaves.sort((a, b) -> a.compareTo(b));
+        slaves.sort(Comparator.naturalOrder());
         String fileName2 = path + "pro2pro.csv";
         write(fileName2, slaves);
     }

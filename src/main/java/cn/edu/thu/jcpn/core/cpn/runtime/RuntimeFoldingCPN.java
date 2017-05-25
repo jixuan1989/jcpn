@@ -211,24 +211,26 @@ public class RuntimeFoldingCPN {
         }
 
         EventType eventType = nextEventTimeNodes.getLeft();
-        Set<INode> nodes = nextEventTimeNodes.getRight();
+        Set<INode> eventNodes = nextEventTimeNodes.getRight();
 
-        logger.trace(() -> String.format("Run %s events... %s", eventType.toString(), nodes));
+        logger.trace(() -> String.format("Run %s events... %s", eventType.toString(), eventNodes));
         if (eventType.equals(LOCAL)) {
-            runLocalEvents(start, times);
+            runLocalEvents(eventNodes, start, times);
         } else {
-            runRemoteEvents();
+            runRemoteEvents(eventNodes);
         }
 
         return true;
     }
 
-    private void runRemoteEvents() {
-        nodes.parallelStream().forEach(node -> insertAgencyManager.runAgencyEvents(node));
+    private void runRemoteEvents(Set<INode> eventNodes) {
+        eventNodes.parallelStream().forEach(eventNode -> insertAgencyManager.runAgencyEvents(eventNode));
+        //nodes.forEach(node -> insertAgencyManager.runAgencyEvents(node));
     }
 
-    private void runLocalEvents(long start, int times) {
-        nodes.parallelStream().forEach(node -> this.runNodeLocalEvents(start, times, node));
+    private void runLocalEvents(Set<INode> eventNodes, long start, int times) {
+        eventNodes.parallelStream().forEach(eventNode -> this.runNodeLocalEvents(start, times, eventNode));
+        //nodes.forEach(node -> this.runNodeLocalEvents(start, times, node));
     }
 
     private void runNodeLocalEvents(long start, int times, INode node) {

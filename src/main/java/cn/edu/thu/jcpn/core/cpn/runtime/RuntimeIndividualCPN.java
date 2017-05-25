@@ -177,7 +177,6 @@ public class RuntimeIndividualCPN {
     public void notifyTransitions() {
         transitions.values().forEach(RuntimeTransition::checkNewlyTokens4Firing);
         containers.values().forEach(IRuntimeContainer::markTokensAsTested);
-
     }
 
     /**

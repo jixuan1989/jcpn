@@ -1,21 +1,20 @@
 package cn.edu.thu.jcpn.DistributedDatabase;
 
 import cn.edu.thu.jcpn.DistributedDatabase.token.SignalsToken;
-import cn.edu.thu.jcpn.DistributedDatabase.token.KeyToken;
-import cn.edu.thu.jcpn.DistributedDatabase.token.KeySignalToken;
 import cn.edu.thu.jcpn.core.container.Place;
 import cn.edu.thu.jcpn.core.container.Place.PlaceType;
 import cn.edu.thu.jcpn.core.cpn.CPN;
 import cn.edu.thu.jcpn.core.cpn.runtime.RuntimeFoldingCPN;
 import cn.edu.thu.jcpn.core.executor.transition.Transition;
 import cn.edu.thu.jcpn.core.executor.transition.Transition.TransitionType;
+import cn.edu.thu.jcpn.core.executor.transition.condition.InputToken;
 import cn.edu.thu.jcpn.core.executor.transition.condition.OutputToken;
 import cn.edu.thu.jcpn.core.monitor.IPlaceMonitor;
+import cn.edu.thu.jcpn.core.monitor.ITransitionMonitor;
 import cn.edu.thu.jcpn.core.runtime.tokens.INode;
 import cn.edu.thu.jcpn.core.runtime.tokens.IToken;
 import cn.edu.thu.jcpn.core.runtime.tokens.StringNode;
 import cn.edu.thu.jcpn.core.runtime.tokens.UnitToken;
-import com.sun.org.apache.regexp.internal.RE;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -29,7 +28,7 @@ import java.util.stream.IntStream;
  */
 public class DistributedDatabaseTest {
 
-    private static int SLAVES = 1000;
+    private static int SLAVES = 2;
     private static int MASTERS = 1;
 
     private RuntimeFoldingCPN instance;
@@ -87,7 +86,8 @@ public class DistributedDatabaseTest {
         Place packagMessages = new Place("Packet Messages", PlaceType.LOCAL);
         Place toSendMessages = new Place("To Send Messages", PlaceType.COMMUNICATING);
         Place receivedMessages = new Place("Received Messages", PlaceType.COMMUNICATING);
-        Place respondAcks = new Place("responded  Acks", PlaceType.LOCAL);
+        Place receivedAcks = new Place("Received Acks", PlaceType.LOCAL);
+        Place respondAcks = new Place("responded  Acks", PlaceType.COMMUNICATING);
 
         Transition unpackaging = new Transition("Unfolding and Unpackaging a Message", TransitionType.LOCAL);
         unpackaging.addInContainer(slaveThreads).addInContainer(packagMessages);
@@ -124,39 +124,53 @@ public class DistributedDatabaseTest {
         });
 
         Transition responding = new Transition("Responding an ack", TransitionType.TRANSMIT);
-        responding.addInContainer(receivedMessages).addInContainer(respondAcks);
-        responding.addOutContainer(respondAcks);
-        responding.addCondition(inputToken -> {
-            IToken receivedSignal = inputToken.get(receivedMessages.getId());
-            IToken respondAck = inputToken.get(respondAcks.getId());
-
-            INode respondTo = receivedSignal.getFrom();
-            INode signalOwner = respondAck.getOwner();
-
-            return respondTo.getName().equals(signalOwner.getName());
-        }, receivedMessages, respondAcks);
+        responding.addInContainer(receivedMessages);
+        responding.addOutContainer(receivedAcks);
 
         responding.setTransferFunction(inputToken -> {
             OutputToken outputToken = new OutputToken();
 
             IToken receivedSignal = inputToken.get(receivedMessages.getId());
-            SignalsToken respondAck = (SignalsToken) inputToken.get(respondAcks.getId());
 
             INode signalOwner = receivedSignal.getFrom();
+            INode signalHandler = receivedSignal.getOwner();
 
             UnitToken ack = new UnitToken();
             ack.setOwner(signalOwner);
-            ack.setTo(receivedSignal.getOwner());
+            ack.setFrom(signalHandler);
             ack.setTimeCost(1);
-            respondAck.add(ack);
-            outputToken.addToken(signalOwner, respondAcks.getId(), receivedSignal);
+            outputToken.addToken(signalOwner, receivedAcks.getId(), ack);
+
+            return outputToken;
+        });
+
+        Transition ackHandling = new Transition("handling an ack", TransitionType.LOCAL);
+        ackHandling.addInContainer(receivedAcks).addInContainer(respondAcks);
+        ackHandling.addOutContainer(respondAcks);
+
+        ackHandling.setTransferFunction(inputToken -> {
+            OutputToken outputToken = new OutputToken();
+
+            SignalsToken acks = (SignalsToken) inputToken.get(respondAcks.getId());
+            IToken respondAck = inputToken.get(receivedAcks.getId());
+
+            INode owner = acks.getOwner();
+            INode from = respondAck.getFrom();
+
+            SignalsToken newAcks = new SignalsToken(acks);
+            UnitToken ack = new UnitToken();
+            ack.setTo(from);
+            ack.setOwner(owner);
+            newAcks.add(ack);
+            newAcks.setTimeCost(1);
+            outputToken.addToken(owner, respondAcks.getId(), newAcks);
 
             return outputToken;
         });
 
         Transition packaging = new Transition("Folding and Packaging a Message", TransitionType.TRANSMIT);
         packaging.addInContainer(respondAcks);
-        packaging.addOutContainer(masterThreads).addOutContainer(packagMessages);
+        packaging.addOutContainer(masterThreads).addOutContainer(packagMessages).addOutContainer(respondAcks);
         packaging.addCondition(inputToken -> {
             SignalsToken respondAck = (SignalsToken) inputToken.get(respondAcks.getId());
 
@@ -168,9 +182,15 @@ public class DistributedDatabaseTest {
 
             SignalsToken respondAck = (SignalsToken) inputToken.get(respondAcks.getId());
 
+            INode owner = respondAck.getOwner();
+
             SignalsToken packageMessage = new SignalsToken(respondAck);
             packageMessage.setTimeCost(1);
-            outputToken.addToken(respondAck.getOwner(), packagMessages.getId(), packageMessage);
+            outputToken.addToken(owner, packagMessages.getId(), packageMessage);
+
+            SignalsToken acks = new SignalsToken();
+            acks.setTimeCost(1);
+            outputToken.addToken(owner, respondAcks.getId(), acks);
 
             UnitToken masterThread = new UnitToken();
             masterThread.setTimeCost(1);
@@ -180,9 +200,10 @@ public class DistributedDatabaseTest {
         });
 
         slaves.forEach(slave -> packagMessages.addInitToken(slave, new SignalsToken(slave, slaves)));
+        slaves.forEach(slave -> respondAcks.addInitToken(slave, new SignalsToken(slave)));
 
-        slaveCPN.addContainers(slaveThreads, packagMessages, toSendMessages, receivedMessages, respondAcks);
-        slaveCPN.addTransitions(unpackaging, transmitting, responding, packaging);
+        slaveCPN.addContainers(slaveThreads, packagMessages, toSendMessages, receivedMessages, respondAcks, receivedAcks);
+        slaveCPN.addTransitions(unpackaging, transmitting, responding, packaging, ackHandling);
         instance.addCpn(slaveCPN, slaves);
 
 //        instance.addMonitor(waitings.getId(), placeMonitor);
@@ -195,22 +216,33 @@ public class DistributedDatabaseTest {
 //        instance.addMonitor(sents.getId(), placeMonitor);
 //        instance.addMonitor(acknowledgeds.getId(), placeMonitor);
 
-//        ITransitionMonitor transitionMonitor = (time, owner, transitionId, transitionName, inputToken, outputToken) -> System.out.println(owner + "'s " + transitionName + " is fired");
-//        instance.addMonitor(transition1.getId(), transitionMonitor);
-//        instance.addMonitor(transition2.getId(), transitionMonitor);
+        ITransitionMonitor transitionMonitor = new ITransitionMonitor() {
+            @Override
+            public void reportWhenFiring(long currentTime, INode owner, int transitionId, String transitionName, InputToken inputToken, OutputToken outputToken) {
+                System.out.println(owner + "'s " + transitionName + " is fired");
+            }
+        };
+
+        instance.addMonitor(unpackaging.getId(), transitionMonitor);
+        instance.addMonitor(packaging.getId(), transitionMonitor);
+        instance.addMonitor(responding.getId(), transitionMonitor);
+        instance.addMonitor(transmitting.getId(), transitionMonitor);
+        instance.addMonitor(request.getId(), transitionMonitor);
+        instance.addMonitor(ackHandling.getId(), transitionMonitor);
+
     }
 
     @Test
     public void test0() throws InterruptedException {
         int time = 10000;
         long start = System.currentTimeMillis();
-        int count = 0;
+        //int count = 0;
         while (instance.hasNextTime()) {
             instance.nextRound(start, time);
-            ++count;
+            //++count;
             //if (count++ == Integer) break;
         }
-        long end = System.currentTimeMillis();
-        System.out.println(time + "," + (end - start));
+        //long end = System.currentTimeMillis();
+        //System.out.println(time + "," + (end - start));
     }
 }
