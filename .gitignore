@@ -1,4 +1,4 @@
-target/*
+target/
 target
 src/test/resources/*
 .classpath
@@ -9,3 +9,4 @@ src/test/resources/*
 *.iws
 *.iml
 ._*.graffle
+
