@@ -105,6 +105,7 @@ public class CassandraWriter {
         Transition transition200 = new Transition("make request", TransitionType.TRANSMIT);
         transition200.addInContainer(place200).addInContainer(place201);
         transition200.addOutContainer(place100);
+        transition200.addOutContainer(place200).addOutContainer(place201);
         transition200.setTransferFunction(inputToken -> {
             OutputToken outputToken = new OutputToken();
 
@@ -599,7 +600,7 @@ public class CassandraWriter {
         instance.addMonitor(transition100.getId(), transitionMonitor100);
 //        instance.addMonitor(place104.getId(), placeMonitor);
         instance.addMonitor(place109.getId(), placeMonitor109);
-        instance.setMaximumExecutionTime(1000000L * Integer.valueOf(System.getProperty("maxTime", "100")));//us
+        instance.setMaximumExecutionTime(100L * Integer.valueOf(System.getProperty("maxTime", "100")));//us
     }
 
 
@@ -617,7 +618,7 @@ public class CassandraWriter {
         long start = System.currentTimeMillis();
         System.out.println("max requests:" + MAX_REQUEST);
         while (cassandraWriter.instance.hasNextTime()) {
-            //cassandraWriter.instance.nextRound();
+            cassandraWriter.instance.nextRound(start, 1000);
         }
         long end = System.currentTimeMillis();
         System.out.println(end - start);
