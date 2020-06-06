@@ -8,6 +8,7 @@ import cn.edu.thu.jcpn.core.runtime.tokens.IToken;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Created by leven on 2017/2/18.
@@ -25,7 +26,7 @@ public class InsertAgencyManager {
 
     private InsertAgencyManager(RuntimeFoldingCPN foldingCPN) {
         this.foldingCPN = foldingCPN;
-        this.nodeCidAgencies = new HashMap<>();
+        this.nodeCidAgencies = new ConcurrentHashMap<>();
     }
 
     public static void init(RuntimeFoldingCPN foldingCPN) {
